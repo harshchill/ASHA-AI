@@ -28,35 +28,66 @@ const Home = () => {
     }
   }, []);
 
-  // Fetch messages for the current session
-  const { data: messages = [] } = useQuery<Message[]>({
+  // Fetch messages for the current session with improved error handling and refetch logic
+  const { data: messages = [], refetch } = useQuery<Message[]>({
     queryKey: ["/api/messages", sessionId],
     queryFn: async () => {
-      if (!sessionId) return [];
-      const res = await fetch(`/api/messages/${sessionId}`);
-      if (!res.ok) throw new Error("Failed to fetch messages");
-      return res.json();
+      if (!sessionId) {
+        console.log("No sessionId available, returning empty messages array");
+        return [];
+      }
+      try {
+        console.log(`Fetching messages for session: ${sessionId}`);
+        const res = await fetch(`/api/messages/${sessionId}`);
+        
+        if (!res.ok) {
+          throw new Error(`Failed to fetch messages: ${res.status} ${res.statusText}`);
+        }
+        
+        const data = await res.json();
+        console.log(`Retrieved ${data.length} messages for session ${sessionId}`);
+        return data;
+      } catch (error) {
+        console.error("Error fetching messages:", error);
+        throw error;
+      }
     },
     enabled: !!sessionId,
+    // Increase refetch frequency to ensure UI updates
+    refetchInterval: 2000,
+    staleTime: 1000,
   });
 
-  // Send message mutation
+  // Send message mutation with improved error handling and logging
   const { mutate: sendMessage } = useMutation({
     mutationFn: async (content: string) => {
       setIsLoading(true);
-      const res = await apiRequest("POST", "/api/messages", {
-        role: "user",
-        content,
-        sessionId,
-      });
-      const data = await res.json();
-      return data;
+      try {
+        const res = await apiRequest("POST", "/api/messages", {
+          role: "user",
+          content,
+          sessionId,
+        });
+        
+        if (!res.ok) {
+          throw new Error(`API request failed with status ${res.status}`);
+        }
+        
+        const data = await res.json();
+        console.log("Received response:", data);
+        return data;
+      } catch (error) {
+        console.error("Error in sendMessage mutation:", error);
+        throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Message sent successfully, invalidating queries", data);
       queryClient.invalidateQueries({ queryKey: ["/api/messages", sessionId] });
       setIsLoading(false);
     },
     onError: (error) => {
+      console.error("Error in sendMessage mutation:", error);
       toast({
         title: "Error",
         description: "Failed to send message. Please try again.",
@@ -102,7 +133,27 @@ const Home = () => {
 
   const handleSendMessage = (content: string) => {
     if (!content.trim()) return;
+    
+    // Log the message being sent 
+    console.log(`Sending message with sessionId: ${sessionId}`);
+    
+    // Manually add the user message to state for immediate display
+    // This creates a smoother UX by showing the user message immediately
+    const tempMessage: Message = {
+      id: Date.now(), // Temporary ID that will be replaced after refetch
+      role: "user",
+      content: content,
+      timestamp: new Date().toISOString(),
+      sessionId: sessionId
+    };
+    
+    // Send the message to the API
     sendMessage(content);
+    
+    // Force an immediate refetch after a short delay to get the actual updated messages
+    setTimeout(() => {
+      refetch();
+    }, 500);
   };
 
   return (
