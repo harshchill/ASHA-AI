@@ -134,3 +134,79 @@ export async function getMentorshipInfo(query: string): Promise<string> {
     return "We regret to inform you that our mentorship information service is temporarily unavailable. Please try your request again shortly.";
   }
 }
+
+export interface CareerConfidenceAnalysis {
+  confidenceLevel: 'low' | 'medium' | 'high';
+  emotionTone: 'anxious' | 'neutral' | 'confident';
+  supportLevel: 'high-support' | 'moderate-support' | 'minimal-guidance';
+}
+
+export async function analyzeCareerConfidence(text: string): Promise<CareerConfidenceAnalysis> {
+  try {
+    console.log("Starting career confidence analysis with Groq API");
+    
+    // Set a timeout of 5 seconds (shorter for sentiment analysis)
+    const timeoutPromise = new Promise<CareerConfidenceAnalysis>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error("Groq API confidence analysis request timed out after 5 seconds"));
+      }, 5000);
+    });
+    
+    // Promise that performs the actual API request
+    const apiPromise = groq.chat.completions.create({
+      model: "llama3-70b-8192",
+      messages: [
+        {
+          role: "system" as const,
+          content: "You are an expert career counselor who specializes in analyzing career confidence levels from text. Your task is to analyze the text and determine the user's career confidence level, emotional tone regarding career, and the level of support they need. Return only a JSON object with these three attributes: confidenceLevel, emotionTone, and supportLevel.",
+        },
+        {
+          role: "user" as const,
+          content: `Analyze this text for career confidence, emotional tone, and required support level: "${text}". Return as JSON with confidenceLevel (low/medium/high), emotionTone (anxious/neutral/confident), and supportLevel (high-support/moderate-support/minimal-guidance).`,
+        },
+      ],
+      response_format: { type: "json_object" },
+      max_tokens: 150,
+      temperature: 0.3,
+    }).then(response => {
+      const content = response.choices[0].message.content;
+      if (!content) {
+        // Default values if no content
+        return {
+          confidenceLevel: 'medium',
+          emotionTone: 'neutral', 
+          supportLevel: 'moderate-support'
+        };
+      }
+      try {
+        const result = JSON.parse(content);
+        return {
+          confidenceLevel: result.confidenceLevel || 'medium',
+          emotionTone: result.emotionTone || 'neutral',
+          supportLevel: result.supportLevel || 'moderate-support'
+        };
+      } catch (parseError) {
+        // Default values if parsing fails
+        console.error("Error parsing confidence analysis response:", parseError);
+        return {
+          confidenceLevel: 'medium',
+          emotionTone: 'neutral',
+          supportLevel: 'moderate-support'
+        };
+      }
+    });
+
+    // Race between the API call and the timeout
+    const result = await Promise.race([apiPromise, timeoutPromise]);
+    console.log("Successfully completed career confidence analysis with Groq API", result);
+    return result;
+  } catch (error) {
+    console.error("Error analyzing career confidence:", error);
+    // Return default values if there's an error
+    return {
+      confidenceLevel: 'medium',
+      emotionTone: 'neutral',
+      supportLevel: 'moderate-support'
+    };
+  }
+}

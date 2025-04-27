@@ -1,7 +1,13 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { getChatCompletion, getCareerAdvice, getMentorshipInfo } from "./openai";
+import { 
+  getChatCompletion, 
+  getCareerAdvice, 
+  getMentorshipInfo, 
+  analyzeCareerConfidence,
+  type CareerConfidenceAnalysis
+} from "./openai";
 import { insertMessageSchema } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
@@ -112,10 +118,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log("Stored assistant message in database");
 
-      // Return both messages
+      // Analyze the career confidence level from the user message
+      console.log("Analyzing career confidence from user message");
+      let confidenceAnalysis: CareerConfidenceAnalysis;
+      try {
+        confidenceAnalysis = await analyzeCareerConfidence(userMessage.content);
+        console.log("Career confidence analysis:", confidenceAnalysis);
+      } catch (error) {
+        console.error("Error analyzing career confidence:", error);
+        // Default values if analysis fails
+        confidenceAnalysis = {
+          confidenceLevel: 'medium',
+          emotionTone: 'neutral',
+          supportLevel: 'moderate-support'
+        };
+      }
+
+      // Return messages with confidence analysis
       res.json({
         userMessage,
-        assistantMessage
+        assistantMessage,
+        confidenceAnalysis
       });
       
       console.log("Successfully completed message processing");
