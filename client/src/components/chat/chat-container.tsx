@@ -69,14 +69,20 @@ const ChatContainer = ({ messages, isLoading, isTtsEnabled, onSendMessage }: Cha
       {/* Typing indicator when loading */}
       {isLoading && (
         <div className="flex items-end gap-2 max-w-[85%] self-start">
-          <div className="w-8 h-8 rounded-full bg-[#6A2C91] flex items-center justify-center text-white flex-shrink-0">
-            <i className="ri-robot-2-line text-sm"></i>
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#6A2C91] to-[#4A1D71] flex items-center justify-center text-white flex-shrink-0 shadow-md">
+            <i className="ri-customer-service-2-line text-sm"></i>
           </div>
-          <div className="chat-bubble-assistant relative">
-            <div className="typing-indicator px-4 py-3 bg-neutral-100 rounded-lg">
-              <span></span>
-              <span></span>
-              <span></span>
+          <div className="relative">
+            <div className="typing-indicator px-5 py-4 bg-white rounded-t-lg rounded-r-lg border border-gray-200 shadow-sm">
+              <div className="flex items-center">
+                <span className="text-xs text-gray-500 mr-2">💭</span>
+                <span className="text-xs font-medium text-gray-700">Preparing professional response</span>
+              </div>
+              <div className="flex mt-1">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
             </div>
           </div>
         </div>
