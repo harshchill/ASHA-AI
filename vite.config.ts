@@ -16,16 +16,11 @@ export default defineConfig({
     },
   },
   root: resolve(__dirname, 'client'),
+  optimizeDeps: {
+    include: ['@tanstack/react-query']
+  },
   build: {
     outDir: resolve(__dirname, 'dist/public'),
-    emptyOutDir: true,
-    rollupOptions: {
-      external: ['@tanstack/react-query'],
-      output: {
-        globals: {
-          '@tanstack/react-query': 'ReactQuery'
-        }
-      }
-    }
+    emptyOutDir: true
   },
 })
