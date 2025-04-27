@@ -116,7 +116,21 @@ const ChatInput = ({
             onClick={onToggleTts}
           >
             <i className={`${isTtsEnabled ? 'ri-volume-up-line' : 'ri-volume-mute-line'}`}></i>
-            <span>{isTtsEnabled ? "Audio On" : "Audio Off"}</span>
+            <span>
+              {isTtsEnabled ? 
+                (language === 'hindi' ? "ऑडियो चालू" :
+                 language === 'tamil' ? "ஒலி இயக்கத்தில்" :
+                 language === 'telugu' ? "ఆడియో ఆన్" :
+                 language === 'kannada' ? "ಆಡಿಯೋ ಆನ್" :
+                 language === 'bengali' ? "অডিও চালু" : "Audio On") 
+                : 
+                (language === 'hindi' ? "ऑडियो बंद" :
+                 language === 'tamil' ? "ஒலி அணைப்பில்" :
+                 language === 'telugu' ? "ఆడియో ఆఫ్" :
+                 language === 'kannada' ? "ಆಡಿಯೋ ಆಫ್" :
+                 language === 'bengali' ? "অডিও বন্ধ" : "Audio Off")
+              }
+            </span>
           </Button>
           
           <Button 
