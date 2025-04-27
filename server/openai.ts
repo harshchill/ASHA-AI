@@ -17,8 +17,8 @@ export async function getChatCompletion(request: ChatCompletionRequest): Promise
     // Set a timeout of 15 seconds
     const timeoutPromise = new Promise<string>((_, reject) => {
       setTimeout(() => {
-        reject(new Error("Groq API request timed out after 15 seconds"));
-      }, 15000);
+        reject(new Error("Groq API request timed out after 10 seconds"));
+      }, 10000);
     });
     
     const systemMessage = {
@@ -36,7 +36,8 @@ export async function getChatCompletion(request: ChatCompletionRequest): Promise
     const apiPromise = groq.chat.completions.create({
       model: "llama3-70b-8192",
       messages: [systemMessage, ...formattedMessages],
-      max_tokens: 1024, // Limit response length
+      max_tokens: 800, // Reduced tokens for faster response
+      temperature: 0.7, // Balanced creativity vs determinism
     }).then(response => {
       return response.choices[0].message.content || "We regret to inform you that we are unable to process your request at this moment. Please try again or contact JobsForHer Foundation for assistance.";
     });
@@ -59,8 +60,8 @@ export async function getCareerAdvice(query: string): Promise<string> {
     // Set a timeout of 15 seconds
     const timeoutPromise = new Promise<string>((_, reject) => {
       setTimeout(() => {
-        reject(new Error("Groq API career advice request timed out after 15 seconds"));
-      }, 15000);
+        reject(new Error("Groq API career advice request timed out after 10 seconds"));
+      }, 10000);
     });
     
     // Promise that performs the actual API request
@@ -76,7 +77,8 @@ export async function getCareerAdvice(query: string): Promise<string> {
           content: query,
         },
       ],
-      max_tokens: 1024, // Limit response length
+      max_tokens: 800, // Reduced tokens for faster response
+      temperature: 0.7, // Balanced creativity vs determinism
     }).then(response => {
       return response.choices[0].message.content || "We regret to inform you that we are unable to generate career guidance at this time. Please try again later or contact the JobsForHer Foundation for personalized career consultation services.";
     });
@@ -99,8 +101,8 @@ export async function getMentorshipInfo(query: string): Promise<string> {
     // Set a timeout of 15 seconds
     const timeoutPromise = new Promise<string>((_, reject) => {
       setTimeout(() => {
-        reject(new Error("Groq API mentorship info request timed out after 15 seconds"));
-      }, 15000);
+        reject(new Error("Groq API mentorship info request timed out after 10 seconds"));
+      }, 10000);
     });
     
     // Promise that performs the actual API request
@@ -116,7 +118,8 @@ export async function getMentorshipInfo(query: string): Promise<string> {
           content: query,
         },
       ],
-      max_tokens: 1024, // Limit response length
+      max_tokens: 800, // Reduced tokens for faster response
+      temperature: 0.7, // Balanced creativity vs determinism
     }).then(response => {
       return response.choices[0].message.content || "We regret to inform you that our mentorship information is temporarily unavailable. Please contact the JobsForHer Foundation directly for details about our ongoing mentorship programs and professional development initiatives.";
     });
