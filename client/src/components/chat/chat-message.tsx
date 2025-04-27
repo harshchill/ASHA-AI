@@ -1,12 +1,6 @@
 import { Button } from "@/components/ui/button";
 
-interface Message {
-  id: number;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: string | Date;
-  sessionId: string;
-}
+import { Message } from "@/types";
 
 interface ChatMessageProps {
   message: Message;

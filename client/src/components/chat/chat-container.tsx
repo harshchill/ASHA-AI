@@ -4,13 +4,7 @@ import WelcomeMessage from "./welcome-message";
 import { useToast } from "@/hooks/use-toast";
 import useTextToSpeech from "@/hooks/use-text-to-speech";
 
-interface Message {
-  id: number;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: string | Date;
-  sessionId: string;
-}
+import { Message } from "@/types";
 
 interface ChatContainerProps {
   messages: Message[];

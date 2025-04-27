@@ -8,13 +8,7 @@ import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-interface Message {
-  id: number;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: string | Date;
-  sessionId: string;
-}
+import { Message } from "@/types";
 
 const Home = () => {
   const [sessionId, setSessionId] = useState<string>("");

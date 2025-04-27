@@ -1,20 +1,9 @@
 import { apiRequest } from "./queryClient";
+import { Message } from "@/types";
 
 interface ChatCompletionResponse {
-  userMessage: {
-    id: number;
-    role: string;
-    content: string;
-    timestamp: string | Date;
-    sessionId: string;
-  };
-  assistantMessage: {
-    id: number;
-    role: string;
-    content: string;
-    timestamp: string | Date;
-    sessionId: string;
-  };
+  userMessage: Message;
+  assistantMessage: Message;
 }
 
 export async function sendMessage(
