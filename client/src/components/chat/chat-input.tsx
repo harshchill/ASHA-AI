@@ -81,7 +81,7 @@ const ChatInput = ({
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             className="flex-1 bg-transparent border-none outline-none text-sm placeholder-neutral-700/50 font-medium"
-            placeholder={isListening ? "Listening..." : "Enter your professional inquiry..."}
+            placeholder={isListening ? "🎤 Listening..." : "💬 Enter your professional inquiry..."}
             disabled={isLoading || isListening}
           />
           <Button 
@@ -109,7 +109,7 @@ const ChatInput = ({
             onClick={onToggleTts}
           >
             <i className={`${isTtsEnabled ? 'ri-volume-up-line' : 'ri-volume-mute-line'}`}></i>
-            <span>{isTtsEnabled ? "Audio Enabled" : "Audio Disabled"}</span>
+            <span>{isTtsEnabled ? "🔊 Audio Enabled" : "🔇 Audio Disabled"}</span>
           </Button>
           
           <Button 
@@ -119,11 +119,11 @@ const ChatInput = ({
             onClick={onClearChat}
           >
             <i className="ri-delete-bin-line"></i>
-            <span>Clear Conversation</span>
+            <span>🗑️ Clear Conversation</span>
           </Button>
         </div>
         <div className="flex items-center">
-          <span className="text-xs font-medium text-neutral-600">Powered by JobsForHer Foundation</span>
+          <span className="text-xs font-medium text-neutral-600">✨ Powered by JobsForHer Foundation</span>
         </div>
       </div>
     </div>

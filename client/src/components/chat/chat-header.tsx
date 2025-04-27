@@ -13,8 +13,8 @@ const ChatHeader = ({ onReset }: ChatHeaderProps) => {
           <i className="ri-customer-service-2-line text-xl"></i>
         </div>
         <div>
-          <h1 className="text-lg font-poppins font-bold bg-gradient-to-r from-[#6A2C91] to-[#9D5CC2] text-transparent bg-clip-text">Asha AI</h1>
-          <p className="text-xs text-neutral-700/90 font-medium tracking-wide">JobsForHer Foundation</p>
+          <h1 className="text-lg font-poppins font-bold bg-gradient-to-r from-[#6A2C91] to-[#9D5CC2] text-transparent bg-clip-text">💫 Asha AI</h1>
+          <p className="text-xs text-neutral-700/90 font-medium tracking-wide">👩‍💼 JobsForHer Foundation</p>
         </div>
       </div>
       <div className="flex gap-3">
@@ -28,7 +28,7 @@ const ChatHeader = ({ onReset }: ChatHeaderProps) => {
                 className="border-[#6A2C91]/20 text-[#6A2C91] hover:bg-[#6A2C91]/5 hover:text-[#6A2C91] rounded-md transition-colors"
               >
                 <i className="ri-refresh-line mr-1"></i>
-                New Conversation
+                🔄 New Conversation
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -49,7 +49,7 @@ const ChatHeader = ({ onReset }: ChatHeaderProps) => {
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>About Asha AI</p>
+              <p>ℹ️ About Asha AI</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
