@@ -9,6 +9,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { 
+  useCareerConfidence, 
+  getColorSchemeForConfidence,
+  getSupportivePhrase 
+} from "@/contexts/CareerConfidenceContext";
 
 interface ChatMessageProps {
   message: Message;
@@ -20,6 +25,11 @@ const ChatMessage = ({ message, onSpeakMessage }: ChatMessageProps) => {
   const [formattedContent, setFormattedContent] = useState<string>(message.content);
   const [keyPoints, setKeyPoints] = useState<string[]>([]);
   const [showKeyPoints, setShowKeyPoints] = useState<boolean>(false);
+  const { confidenceState } = useCareerConfidence();
+  
+  // Get the color scheme and supportive text based on confidence level
+  const colorScheme = getColorSchemeForConfidence(confidenceState);
+  const supportivePhrase = getSupportivePhrase(confidenceState);
   
   // Extract key points from the message
   const extractKeyPoints = (content: string): string[] => {

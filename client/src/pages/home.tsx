@@ -7,7 +7,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-
+import { useCareerConfidence } from "@/contexts/CareerConfidenceContext";
 import { Message } from "@/types";
 
 const Home = () => {
@@ -15,6 +15,7 @@ const Home = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isTtsEnabled, setIsTtsEnabled] = useState<boolean>(true);
   const { toast } = useToast();
+  const { confidenceState, updateConfidence } = useCareerConfidence();
 
   // Initialize session ID on component mount
   useEffect(() => {
@@ -83,6 +84,13 @@ const Home = () => {
     },
     onSuccess: (data) => {
       console.log("Message sent successfully, invalidating queries", data);
+      
+      // Update the career confidence state with the analysis from the API
+      if (data.confidenceAnalysis) {
+        console.log("Updating career confidence with analysis:", data.confidenceAnalysis);
+        updateConfidence(data.confidenceAnalysis);
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["/api/messages", sessionId] });
       setIsLoading(false);
     },

@@ -1,9 +1,11 @@
 import { apiRequest } from "./queryClient";
 import { Message } from "@/types";
+import { CareerConfidenceState } from "@/contexts/CareerConfidenceContext";
 
 interface ChatCompletionResponse {
   userMessage: Message;
   assistantMessage: Message;
+  confidenceAnalysis: CareerConfidenceState;
 }
 
 export async function sendMessage(
