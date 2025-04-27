@@ -1,6 +1,4 @@
 import { users, type User, type InsertUser, messages, type Message, type InsertMessage } from "@shared/schema";
-import { db } from "./db";
-import { eq } from "drizzle-orm";
 
 // keep the interface the same
 export interface IStorage {
@@ -14,41 +12,52 @@ export interface IStorage {
   clearMessages(sessionId: string): Promise<void>;
 }
 
-// rewrite MemStorage to DatabaseStorage
-export class DatabaseStorage implements IStorage {
+// In-memory storage implementation
+export class MemStorage implements IStorage {
+  private users: User[] = [];
+  private messages: Message[] = [];
+  private userId = 1;
+  private messageId = 1;
+
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+    return this.users.find(user => user.id === id);
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user || undefined;
+    return this.users.find(user => user.username === username);
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(insertUser)
-      .returning();
+    const user = {
+      id: this.userId++,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ...insertUser
+    };
+    this.users.push(user);
     return user;
   }
 
   async getMessages(sessionId: string): Promise<Message[]> {
-    return await db.select().from(messages).where(eq(messages.sessionId, sessionId));
+    return this.messages
+      .filter(message => message.sessionId === sessionId)
+      .sort((a, b) => a.id - b.id);
   }
 
   async addMessage(insertMessage: InsertMessage): Promise<Message> {
-    const [message] = await db
-      .insert(messages)
-      .values(insertMessage)
-      .returning();
+    const message = {
+      id: this.messageId++,
+      timestamp: new Date(),
+      ...insertMessage
+    };
+    this.messages.push(message);
     return message;
   }
 
   async clearMessages(sessionId: string): Promise<void> {
-    await db.delete(messages).where(eq(messages.sessionId, sessionId));
+    this.messages = this.messages.filter(message => message.sessionId !== sessionId);
   }
 }
 
-export const storage = new DatabaseStorage();
+// Export a MemStorage instance for use in the application
+export const storage = new MemStorage();
