@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import ConversationHistory from "./conversation-history";
 import LanguageSelector from "@/components/language-selector";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ChatHeaderProps {
   onReset: () => void;
@@ -9,6 +10,7 @@ interface ChatHeaderProps {
 }
 
 const ChatHeader = ({ onReset, onSelectSession }: ChatHeaderProps) => {
+  const { t } = useLanguage();
   return (
     <header className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 bg-white sticky top-0 z-10 shadow-sm">
       <div className="flex items-center">
@@ -38,7 +40,7 @@ const ChatHeader = ({ onReset, onSelectSession }: ChatHeaderProps) => {
                 className="border-[#6A2C91]/20 text-[#6A2C91] hover:bg-[#6A2C91]/5 hover:text-[#6A2C91] rounded-md transition-colors"
               >
                 <i className="ri-refresh-line mr-1"></i>
-                🔄 New Conversation
+                🔄 {t('newChatLabel')}
               </Button>
             </TooltipTrigger>
             <TooltipContent>

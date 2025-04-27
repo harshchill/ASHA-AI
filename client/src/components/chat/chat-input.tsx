@@ -2,6 +2,7 @@ import { useState, useRef, KeyboardEvent, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import VoiceButton from "./voice-button";
 import useSpeechRecognition from "@/hooks/use-speech-recognition";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -20,6 +21,7 @@ const ChatInput = ({
 }: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const { language, t } = useLanguage();
   
   const { 
     isListening, 
@@ -86,7 +88,7 @@ const ChatInput = ({
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             className="flex-1 bg-transparent border-none outline-none text-sm placeholder-neutral-700/50 font-medium"
-            placeholder={isListening ? "Listening... speak your query" : "Ask your professional query..."}
+            placeholder={isListening ? "Listening..." : t('inputPlaceholder')}
             disabled={isLoading || isListening}
           />
           <Button 
@@ -124,7 +126,7 @@ const ChatInput = ({
             onClick={onClearChat}
           >
             <i className="ri-delete-bin-line"></i>
-            <span>Clear Chat</span>
+            <span>{t('clearButton')}</span>
           </Button>
         </div>
         <div className="flex items-center">
