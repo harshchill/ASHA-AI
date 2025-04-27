@@ -53,14 +53,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Determining response type based on content");
       
       const lowerCaseContent = userMessage.content.toLowerCase();
-      if (lowerCaseContent.includes('career') || lowerCaseContent.includes('job')) {
+      
+      // Expanded career-related keywords for better matching
+      if (lowerCaseContent.includes('career') || 
+          lowerCaseContent.includes('job') || 
+          lowerCaseContent.includes('work') ||
+          lowerCaseContent.includes('employment') ||
+          lowerCaseContent.includes('salary') ||
+          lowerCaseContent.includes('interview') ||
+          lowerCaseContent.includes('resume') ||
+          lowerCaseContent.includes('skill') ||
+          lowerCaseContent.includes('opportunity')) {
         console.log("Processing as career advice request");
         aiResponse = await getCareerAdvice(userMessage.content);
-      } else if (lowerCaseContent.includes('mentor') || lowerCaseContent.includes('mentorship')) {
+      } 
+      // Expanded mentorship-related keywords
+      else if (lowerCaseContent.includes('mentor') || 
+               lowerCaseContent.includes('mentorship') ||
+               lowerCaseContent.includes('guidance') ||
+               lowerCaseContent.includes('coach') ||
+               lowerCaseContent.includes('advisor')) {
         console.log("Processing as mentorship request");
         aiResponse = await getMentorshipInfo(userMessage.content);
-      } else {
-        console.log("Processing as general chat request");
+      } 
+      // Default to general chat completion with career focus
+      else {
+        console.log("Processing as general chat request with career focus");
         aiResponse = await getChatCompletion({ messages: formattedMessages });
       }
 

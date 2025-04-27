@@ -76,7 +76,7 @@ const ChatContainer = ({ messages, isLoading, isTtsEnabled, onSendMessage }: Cha
             <div className="typing-indicator px-5 py-4 bg-white rounded-t-lg rounded-r-lg border border-gray-200 shadow-sm">
               <div className="flex items-center">
                 <span className="text-xs text-gray-500 mr-2">💭</span>
-                <span className="text-xs font-medium text-gray-700">Preparing professional response</span>
+                <span className="text-xs font-medium text-gray-700">Asha is typing... Please wait while Asha provides a personalized response to your query</span>
               </div>
               <div className="flex mt-1">
                 <span></span>
