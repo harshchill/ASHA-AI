@@ -19,7 +19,7 @@ const WelcomeMessage = ({ onSuggestionClick }: WelcomeMessageProps) => {
         <h2 className="font-poppins font-semibold text-[#6A2C91]">Namaste!</h2>
       </div>
       <p className="text-sm mb-3">
-        I'm Asha AI, here to help you explore career opportunities, mentorships, and more. How can I assist you today?
+        Welcome to Asha AI. As your professional assistant from JobsForHer Foundation, I can provide structured guidance on career development, mentorship opportunities, and professional advancement strategies.
       </p>
       <div className="flex flex-wrap gap-2 mt-2">
         {suggestions.map((suggestion, index) => (

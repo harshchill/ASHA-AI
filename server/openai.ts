@@ -23,7 +23,7 @@ export async function getChatCompletion(request: ChatCompletionRequest): Promise
     
     const systemMessage = {
       role: "system" as const,
-      content: "You are Asha AI, an intelligent, responsive, and ethical virtual assistant developed for the JobsForHer Foundation platform. You help users explore career opportunities, mentorships, and more. Keep your answers concise, helpful, and focused on women's career development and JobsForHer services. Your tone should be warm, professional, and encouraging.",
+      content: "You are Asha AI, a professional assistant developed for the JobsForHer Foundation platform. Provide concise, authoritative, and useful information to help women advance their careers through opportunities, mentorships, and skill development. Always maintain a polished, business-appropriate tone with clear structure in your responses. Format information with appropriate spacing and organization. Address users respectfully and professionally. Avoid overly casual language, exclamation points, and excessive warmth. Focus on delivering high-quality, actionable information in a dignified manner suitable for a corporate environment.",
     };
     
     // Convert message format to comply with Groq API requirements
@@ -38,7 +38,7 @@ export async function getChatCompletion(request: ChatCompletionRequest): Promise
       messages: [systemMessage, ...formattedMessages],
       max_tokens: 1024, // Limit response length
     }).then(response => {
-      return response.choices[0].message.content || "I'm sorry, I couldn't generate a response at this time.";
+      return response.choices[0].message.content || "We regret to inform you that we are unable to process your request at this moment. Please try again or contact JobsForHer Foundation for assistance.";
     });
 
     // Race between the API call and the timeout
@@ -48,7 +48,7 @@ export async function getChatCompletion(request: ChatCompletionRequest): Promise
   } catch (error) {
     console.error("Error getting chat completion:", error);
     console.error("Error details:", JSON.stringify(error, null, 2));
-    return "I'm having trouble connecting to my knowledge base. Please try again in a moment.";
+    return "We're currently experiencing technical difficulties accessing our knowledge resources. Please try your request again in a few moments or contact JobsForHer support if the issue persists.";
   }
 }
 
@@ -69,7 +69,7 @@ export async function getCareerAdvice(query: string): Promise<string> {
       messages: [
         {
           role: "system" as const,
-          content: "You are Asha AI, a specialized career advisor for women. Provide concise, actionable career advice related to the JobsForHer Foundation. Focus on empowering women in their career journeys, helping them overcome barriers, and connecting them with relevant opportunities.",
+          content: "You are Asha AI, a professional career advisor at the JobsForHer Foundation. Provide authoritative, structured career guidance for women professionals. Use a formal tone with proper business language. Format responses with clear sections and bullet points where appropriate. Include specific, actionable steps and measurable outcomes. Avoid casual language, exclamation points, and overly emotional expressions. Focus on evidence-based recommendations and industry best practices that can be implemented in a corporate setting.",
         },
         {
           role: "user" as const,
@@ -78,7 +78,7 @@ export async function getCareerAdvice(query: string): Promise<string> {
       ],
       max_tokens: 1024, // Limit response length
     }).then(response => {
-      return response.choices[0].message.content || "I'm sorry, I couldn't generate career advice at this time.";
+      return response.choices[0].message.content || "We regret to inform you that we are unable to generate career guidance at this time. Please try again later or contact the JobsForHer Foundation for personalized career consultation services.";
     });
 
     // Race between the API call and the timeout
@@ -88,7 +88,7 @@ export async function getCareerAdvice(query: string): Promise<string> {
   } catch (error) {
     console.error("Error getting career advice:", error);
     console.error("Error details:", JSON.stringify(error, null, 2));
-    return "I'm having trouble providing career advice right now. Please try again later.";
+    return "We apologize, but our career advisory service is temporarily unavailable. Please attempt your query again in a few moments or contact JobsForHer Foundation for immediate assistance with your career planning needs.";
   }
 }
 
@@ -109,7 +109,7 @@ export async function getMentorshipInfo(query: string): Promise<string> {
       messages: [
         {
           role: "system" as const,
-          content: "You are Asha AI, a mentorship program specialist for the JobsForHer Foundation. Provide information about mentorship programs, how to find mentors, and the benefits of mentorship for women's career development. Be concise and helpful.",
+          content: "You are Asha AI, a professional mentorship program specialist at the JobsForHer Foundation. Provide structured, authoritative information about mentorship programs and professional development opportunities. Present information in a clear, formal business style with proper organization. Include specific program details, statistics, and evidence-based benefits of mentorship. Use appropriate business language and maintain a professional tone throughout. Organize responses with headings and bullet points as needed. Focus on actionable steps and measurable outcomes for career advancement.",
         },
         {
           role: "user" as const,
@@ -118,7 +118,7 @@ export async function getMentorshipInfo(query: string): Promise<string> {
       ],
       max_tokens: 1024, // Limit response length
     }).then(response => {
-      return response.choices[0].message.content || "I'm sorry, I couldn't generate mentorship information at this time.";
+      return response.choices[0].message.content || "We regret to inform you that our mentorship information is temporarily unavailable. Please contact the JobsForHer Foundation directly for details about our ongoing mentorship programs and professional development initiatives.";
     });
 
     // Race between the API call and the timeout
@@ -128,6 +128,6 @@ export async function getMentorshipInfo(query: string): Promise<string> {
   } catch (error) {
     console.error("Error getting mentorship info:", error);
     console.error("Error details:", JSON.stringify(error, null, 2));
-    return "I'm having trouble providing mentorship information right now. Please try again later.";
+    return "We regret to inform you that our mentorship information services are temporarily unavailable. Please try your request again shortly or reach out to the JobsForHer Foundation directly for information regarding our mentorship programs and professional development opportunities.";
   }
 }
