@@ -31,6 +31,7 @@ export async function getChatCompletion(request: ChatCompletionRequest): Promise
     return response.choices[0].message.content || "I'm sorry, I couldn't generate a response at this time.";
   } catch (error) {
     console.error("Error getting chat completion:", error);
+    console.error("Error details:", JSON.stringify(error, null, 2));
     return "I'm having trouble connecting to my knowledge base. Please try again in a moment.";
   }
 }
@@ -54,6 +55,7 @@ export async function getCareerAdvice(query: string): Promise<string> {
     return response.choices[0].message.content || "I'm sorry, I couldn't generate career advice at this time.";
   } catch (error) {
     console.error("Error getting career advice:", error);
+    console.error("Error details:", JSON.stringify(error, null, 2));
     return "I'm having trouble providing career advice right now. Please try again later.";
   }
 }
@@ -77,6 +79,7 @@ export async function getMentorshipInfo(query: string): Promise<string> {
     return response.choices[0].message.content || "I'm sorry, I couldn't generate mentorship information at this time.";
   } catch (error) {
     console.error("Error getting mentorship info:", error);
+    console.error("Error details:", JSON.stringify(error, null, 2));
     return "I'm having trouble providing mentorship information right now. Please try again later.";
   }
 }
