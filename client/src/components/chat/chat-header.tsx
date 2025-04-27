@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import ConversationHistory from "./conversation-history";
+import LanguageSelector from "@/components/language-selector";
 
 interface ChatHeaderProps {
   onReset: () => void;
@@ -20,6 +21,9 @@ const ChatHeader = ({ onReset, onSelectSession }: ChatHeaderProps) => {
         </div>
       </div>
       <div className="flex gap-3">
+        {/* Language Selector */}
+        <LanguageSelector />
+        
         {/* Conversation History Button */}
         <ConversationHistory onSelectSession={onSelectSession} />
         

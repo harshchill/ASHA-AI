@@ -12,7 +12,7 @@ interface ChatCompletionRequest {
 }
 
 // Supported languages
-type SupportedLanguage = 'english' | 'hindi' | 'tamil' | 'telugu' | 'kannada' | 'bengali';
+export type SupportedLanguage = 'english' | 'hindi' | 'tamil' | 'telugu' | 'kannada' | 'bengali';
 
 // Detect language from text using basic pattern recognition
 // In a production app, this would use more sophisticated NLP

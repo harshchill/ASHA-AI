@@ -60,6 +60,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let aiResponse: string;
       console.log("Determining response type based on content");
       
+      // Detect language from user message
+      const detectedLanguage = detectLanguage(userMessage.content);
+      console.log(`Detected language from user message: ${detectedLanguage}`);
+      
       const lowerCaseContent = userMessage.content.toLowerCase();
       
       // Expanded job-related keywords for better matching
@@ -106,7 +110,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Default to general chat completion with career focus
       else {
         console.log("Processing as general chat request with career focus");
-        aiResponse = await getChatCompletion({ messages: formattedMessages });
+        aiResponse = await getChatCompletion({ 
+          messages: formattedMessages,
+          language: detectedLanguage
+        });
       }
 
       console.log("Successfully received AI response");
