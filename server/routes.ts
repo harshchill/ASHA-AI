@@ -6,7 +6,9 @@ import {
   getCareerAdvice, 
   getMentorshipInfo, 
   analyzeCareerConfidence,
-  type CareerConfidenceAnalysis
+  detectLanguage,
+  type CareerConfidenceAnalysis,
+  type SupportedLanguage
 } from "./openai";
 import { insertMessageSchema } from "@shared/schema";
 import { z } from "zod";
