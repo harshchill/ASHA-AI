@@ -120,14 +120,37 @@ const Home = () => {
     },
   });
 
+  // Handles creating a new conversation
   const resetChat = () => {
-    // Generate a new session ID and clear local storage
+    // Store current session ID before replacing it (if it exists)
+    const currentSessionId = localStorage.getItem("ashaSessionId");
+    if (currentSessionId) {
+      const newKey = `prev_session_${nanoid(6)}`;
+      localStorage.setItem(newKey, currentSessionId);
+    }
+    
+    // Generate a new session ID and update local storage
     const newSessionId = nanoid();
     localStorage.setItem("ashaSessionId", newSessionId);
     setSessionId(newSessionId);
+    
     toast({
       title: "Success",
       description: "Started a new conversation.",
+    });
+  };
+  
+  // Handles switching to a different conversation session
+  const handleSelectSession = (newSessionId: string) => {
+    if (newSessionId === sessionId) return; // Already on this session
+    
+    // Update local storage and state
+    localStorage.setItem("ashaSessionId", newSessionId);
+    setSessionId(newSessionId);
+    
+    toast({
+      title: "Session Changed",
+      description: "Switched to a different conversation.",
     });
   };
 
@@ -158,7 +181,10 @@ const Home = () => {
 
   return (
     <div className="flex flex-col h-screen max-w-5xl mx-auto bg-white shadow-lg">
-      <ChatHeader onReset={resetChat} />
+      <ChatHeader 
+        onReset={resetChat} 
+        onSelectSession={handleSelectSession}
+      />
       <ChatContainer 
         messages={messages}
         isLoading={isLoading}

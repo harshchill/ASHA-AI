@@ -1,11 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import ConversationHistory from "./conversation-history";
 
 interface ChatHeaderProps {
   onReset: () => void;
+  onSelectSession: (sessionId: string) => void;
 }
 
-const ChatHeader = ({ onReset }: ChatHeaderProps) => {
+const ChatHeader = ({ onReset, onSelectSession }: ChatHeaderProps) => {
   return (
     <header className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 bg-white sticky top-0 z-10 shadow-sm">
       <div className="flex items-center">
@@ -18,6 +20,10 @@ const ChatHeader = ({ onReset }: ChatHeaderProps) => {
         </div>
       </div>
       <div className="flex gap-3">
+        {/* Conversation History Button */}
+        <ConversationHistory onSelectSession={onSelectSession} />
+        
+        {/* New Conversation Button */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -37,6 +43,7 @@ const ChatHeader = ({ onReset }: ChatHeaderProps) => {
           </Tooltip>
         </TooltipProvider>
         
+        {/* About Button */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
