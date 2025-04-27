@@ -6,10 +6,10 @@ interface WelcomeMessageProps {
 
 const WelcomeMessage = ({ onSuggestionClick }: WelcomeMessageProps) => {
   const suggestions = [
-    "Career advice",
-    "Mentorship programs",
-    "About JobsForHer",
-    "Upcoming events"
+    "💼 Professional development strategies",
+    "🌟 Executive mentorship programs",
+    "🔄 Career transition planning",
+    "📈 Leadership opportunities"
   ];
 
   return (

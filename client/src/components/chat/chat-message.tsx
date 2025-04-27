@@ -13,16 +13,20 @@ const ChatMessage = ({ message, onSpeakMessage }: ChatMessageProps) => {
   return (
     <div className={`flex items-end gap-2 max-w-[85%] ${isUser ? 'self-end' : 'self-start'} mb-4`}>
       {!isUser && (
-        <div className="w-8 h-8 rounded-full bg-[#6A2C91] flex items-center justify-center text-white flex-shrink-0">
-          <i className="ri-robot-2-line text-sm"></i>
+        <div className="w-8 h-8 rounded-full bg-[#6A2C91] flex items-center justify-center text-white flex-shrink-0 shadow-md">
+          <i className="ri-customer-service-2-line text-sm"></i>
         </div>
       )}
       
-      <div className={`relative chat-bubble-tail ${isUser ? 'chat-bubble-user bg-[#6A2C91]/10 rounded-t-lg rounded-l-lg' : 'chat-bubble-assistant bg-neutral-100 rounded-t-lg rounded-r-lg'} p-3 shadow-sm`}>
-        <p className="text-sm">{message.content}</p>
+      <div className={`relative chat-bubble-tail ${
+        isUser 
+          ? 'chat-bubble-user bg-gradient-to-br from-[#6A2C91]/10 to-[#6A2C91]/5 rounded-t-lg rounded-l-lg border border-[#6A2C91]/10' 
+          : 'chat-bubble-assistant bg-white rounded-t-lg rounded-r-lg border border-gray-200'
+        } p-4 shadow-sm`}>
+        <p className="text-sm leading-relaxed whitespace-pre-line">{message.content}</p>
         
         {!isUser && (
-          <div className="text-xs text-right text-neutral-700/50 mt-1">
+          <div className="text-xs text-right text-neutral-700/50 mt-2 flex justify-end">
             <Button 
               variant="ghost" 
               size="sm" 
@@ -36,7 +40,7 @@ const ChatMessage = ({ message, onSpeakMessage }: ChatMessageProps) => {
       </div>
       
       {isUser && (
-        <div className="w-8 h-8 rounded-full bg-[#FF9933]/80 flex items-center justify-center text-white flex-shrink-0">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF9933] to-[#FF8000] flex items-center justify-center text-white flex-shrink-0 shadow-md">
           <i className="ri-user-3-line text-sm"></i>
         </div>
       )}

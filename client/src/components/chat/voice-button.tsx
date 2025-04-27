@@ -12,7 +12,11 @@ const VoiceButton = ({ isListening, onClick, disabled }: VoiceButtonProps) => {
       <Button 
         onClick={onClick}
         disabled={disabled}
-        className={`w-11 h-11 rounded-full bg-[#6A2C91] text-white flex items-center justify-center hover:bg-[#4A1D64] active:bg-[#4A1D64] transition-colors ${isListening ? 'bg-[#FF9933]' : ''}`}
+        className={`w-12 h-12 rounded-full shadow-md flex items-center justify-center transition-all ${
+          isListening 
+            ? 'bg-gradient-to-br from-[#FF9933] to-[#FF8000] text-white' 
+            : 'bg-gradient-to-br from-[#6A2C91] to-[#4A1D64] text-white hover:shadow-lg'
+        }`}
       >
         <i className={`${isListening ? 'ri-record-circle-fill' : 'ri-mic-line'} text-xl`}></i>
       </Button>
