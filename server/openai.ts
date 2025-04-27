@@ -1,8 +1,7 @@
 import OpenAI from "openai";
 
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024.
-// do not change this unless explicitly requested by the user
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "sk-placeholder-key" });
+// Initialize OpenAI client
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 interface ChatCompletionRequest {
   messages: Array<{
@@ -13,6 +12,7 @@ interface ChatCompletionRequest {
 
 export async function getChatCompletion(request: ChatCompletionRequest): Promise<string> {
   try {
+    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -33,6 +33,7 @@ export async function getChatCompletion(request: ChatCompletionRequest): Promise
 
 export async function getCareerAdvice(query: string): Promise<string> {
   try {
+    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -56,6 +57,7 @@ export async function getCareerAdvice(query: string): Promise<string> {
 
 export async function getMentorshipInfo(query: string): Promise<string> {
   try {
+    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [

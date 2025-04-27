@@ -1,7 +1,8 @@
 import { users, type User, type InsertUser, messages, type Message, type InsertMessage } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
-// modify the interface with any CRUD methods
-// you might need
+// keep the interface the same
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -13,55 +14,41 @@ export interface IStorage {
   clearMessages(sessionId: string): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private messages: Map<string, Message[]>;
-  private userCurrentId: number;
-  private messageCurrentId: number;
-
-  constructor() {
-    this.users = new Map();
-    this.messages = new Map();
-    this.userCurrentId = 1;
-    this.messageCurrentId = 1;
-  }
-
+// rewrite MemStorage to DatabaseStorage
+export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userCurrentId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
     return user;
   }
 
   async getMessages(sessionId: string): Promise<Message[]> {
-    return this.messages.get(sessionId) || [];
+    return await db.select().from(messages).where(eq(messages.sessionId, sessionId));
   }
 
   async addMessage(insertMessage: InsertMessage): Promise<Message> {
-    const id = this.messageCurrentId++;
-    const timestamp = new Date();
-    const message: Message = { ...insertMessage, id, timestamp };
-    
-    const sessionMessages = this.messages.get(insertMessage.sessionId) || [];
-    sessionMessages.push(message);
-    this.messages.set(insertMessage.sessionId, sessionMessages);
-    
+    const [message] = await db
+      .insert(messages)
+      .values(insertMessage)
+      .returning();
     return message;
   }
 
   async clearMessages(sessionId: string): Promise<void> {
-    this.messages.delete(sessionId);
+    await db.delete(messages).where(eq(messages.sessionId, sessionId));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
