@@ -21,6 +21,14 @@ export default defineConfig({
   },
   build: {
     outDir: resolve(__dirname, 'dist/public'),
-    emptyOutDir: true
+    emptyOutDir: true,
+    rollupOptions: {
+      external: [],
+      output: {
+        manualChunks: {
+          'react-query': ['@tanstack/react-query']
+        }
+      }
+    }
   },
 })
