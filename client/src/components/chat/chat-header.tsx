@@ -12,11 +12,11 @@ const ChatHeader = ({ onReset, onSelectSession }: ChatHeaderProps) => {
     <header className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 bg-white sticky top-0 z-10 shadow-sm">
       <div className="flex items-center">
         <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#6A2C91] to-[#4A1D71] flex items-center justify-center text-white mr-3 shadow-md">
-          <i className="ri-customer-service-2-line text-xl"></i>
+          <i className="ri-robot-2-line text-xl"></i>
         </div>
         <div>
-          <h1 className="text-lg font-poppins font-bold bg-gradient-to-r from-[#6A2C91] to-[#9D5CC2] text-transparent bg-clip-text">💫 Asha AI</h1>
-          <p className="text-xs text-neutral-700/90 font-medium tracking-wide">👩‍💼 JobsForHer Foundation</p>
+          <h1 className="text-lg font-poppins font-bold bg-gradient-to-r from-[#6A2C91] to-[#9D5CC2] text-transparent bg-clip-text">Asha AI</h1>
+          <p className="text-xs text-neutral-700/90 font-medium tracking-wide">JobsForHer Foundation</p>
         </div>
       </div>
       <div className="flex gap-3">

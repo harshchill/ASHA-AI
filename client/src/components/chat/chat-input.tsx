@@ -74,6 +74,11 @@ const ChatInput = ({
     <div className="p-5 border-t border-neutral-200 bg-white sticky bottom-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
       <div className="flex items-center gap-3">
         <div className="flex-1 bg-white rounded-md border border-neutral-300 flex items-center px-4 py-3 focus-within:border-[#6A2C91]/60 focus-within:ring-2 focus-within:ring-[#6A2C91]/20 transition-all shadow-sm">
+          {isListening && (
+            <div className="flex items-center justify-center animate-pulse mr-2">
+              <i className="ri-mic-fill text-red-500"></i>
+            </div>
+          )}
           <input 
             ref={inputRef}
             type="text" 
@@ -81,7 +86,7 @@ const ChatInput = ({
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             className="flex-1 bg-transparent border-none outline-none text-sm placeholder-neutral-700/50 font-medium"
-            placeholder={isListening ? "🎤 Listening..." : "💬 Ask your professional query..."}
+            placeholder={isListening ? "Listening... speak your query" : "Ask your professional query..."}
             disabled={isLoading || isListening}
           />
           <Button 
@@ -89,7 +94,7 @@ const ChatInput = ({
             variant="ghost"
             size="sm"
             disabled={!message.trim() || isLoading}
-            className="text-neutral-700/70 hover:text-[#6A2C91] transition-colors ml-2 p-1 h-auto"
+            className={`ml-2 p-1 h-auto transition-colors ${!message.trim() || isLoading ? 'text-neutral-400' : 'text-[#6A2C91] hover:text-[#9D5CC2]'}`}
           >
             <i className="ri-send-plane-fill text-xl"></i>
           </Button>
@@ -100,30 +105,30 @@ const ChatInput = ({
           disabled={isLoading}
         />
       </div>
-      <div className="flex justify-between items-center mt-3 px-1">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap justify-between items-center mt-3 px-1 gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button 
             variant="outline"
             size="sm"
-            className="flex items-center gap-2 h-8 text-xs font-medium text-[#6A2C91]/80 border-[#6A2C91]/20 hover:bg-[#6A2C91]/5"
+            className="flex items-center gap-1 h-8 text-xs font-medium text-[#6A2C91]/80 border-[#6A2C91]/20 hover:bg-[#6A2C91]/5"
             onClick={onToggleTts}
           >
             <i className={`${isTtsEnabled ? 'ri-volume-up-line' : 'ri-volume-mute-line'}`}></i>
-            <span>{isTtsEnabled ? "🔊 Audio Enabled" : "🔇 Audio Disabled"}</span>
+            <span>{isTtsEnabled ? "Audio On" : "Audio Off"}</span>
           </Button>
           
           <Button 
             variant="outline"
             size="sm"
-            className="flex items-center gap-2 h-8 text-xs font-medium text-neutral-700/80 border-neutral-300/80 hover:bg-neutral-100"
+            className="flex items-center gap-1 h-8 text-xs font-medium text-neutral-700/80 border-neutral-300/80 hover:bg-neutral-100"
             onClick={onClearChat}
           >
             <i className="ri-delete-bin-line"></i>
-            <span>🗑️ Clear Conversation</span>
+            <span>Clear Chat</span>
           </Button>
         </div>
         <div className="flex items-center">
-          <span className="text-xs font-medium text-neutral-600">✨ Powered by JobsForHer Foundation</span>
+          <span className="text-xs font-medium text-[#6A2C91]/60">✨ JobsForHer Foundation | ASHA AI Hackathon 2025</span>
         </div>
       </div>
     </div>

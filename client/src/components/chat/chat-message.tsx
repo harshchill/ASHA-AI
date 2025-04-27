@@ -139,16 +139,16 @@ const ChatMessage = ({ message, onSpeakMessage }: ChatMessageProps) => {
         )}
         
         {!isUser && (
-          <div className="text-xs text-right text-neutral-700/50 mt-2 flex justify-between items-center">
+          <div className="text-xs text-right text-neutral-700/50 mt-3 flex justify-end items-center gap-2">
             {keyPoints.length > 0 && (
               <Dialog>
                 <DialogTrigger asChild>
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="p-1 h-auto text-[#6A2C91]/70 hover:text-[#6A2C91] transition-colors"
+                    className="p-1 h-auto text-[#6A2C91]/70 hover:text-[#6A2C91] transition-colors flex items-center"
                   >
-                    <i className="ri-lightbulb-flash-line mr-1"></i>
+                    <i className="ri-lightbulb-flash-line mr-1 text-amber-500"></i>
                     <span className="text-xs">Key Points</span>
                   </Button>
                 </DialogTrigger>
@@ -177,6 +177,7 @@ const ChatMessage = ({ message, onSpeakMessage }: ChatMessageProps) => {
               size="sm" 
               className="p-1 h-auto hover:text-[#6A2C91] transition-colors"
               onClick={() => onSpeakMessage(message.content)}
+              title="Listen to response"
             >
               <i className="ri-volume-up-line"></i>
             </Button>

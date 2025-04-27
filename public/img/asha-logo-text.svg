@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="260" height="100" viewBox="0 0 260 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Logo icon -->
+  <g transform="translate(10, 10) scale(0.8)">
+    <!-- Background circle with gradient -->
+    <circle cx="60" cy="50" r="50" fill="url(#gradient)" />
+    
+    <!-- Letter "A" in stylized form -->
+    <path d="M45 75V25H65C75 25 82 32 82 42C82 52 75 59 65 59H52V75H45Z" fill="#ffffff"/>
+    <path d="M52 53H64C71 53 75 48 75 42C75 36 71 31 64 31H52V53Z" fill="#6A2C91"/>
+    
+    <!-- Decorative elements representing chat bubbles -->
+    <circle cx="92" cy="30" r="8" fill="#FF9933"/>
+    <circle cx="92" cy="50" r="6" fill="#ffffff" opacity="0.8"/>
+    <circle cx="92" cy="66" r="4" fill="#ffffff" opacity="0.6"/>
+  </g>
+  
+  <!-- Text "Asha AI" -->
+  <g transform="translate(120, 54)">
+    <!-- Asha -->
+    <path d="M0 0V-30H5L20 -10V-30H27V0H22L7 -20V0H0Z" fill="#6A2C91"/>
+    <path d="M32 0V-30H42C52 -30 58 -24 58 -15C58 -6 52 0 42 0H32ZM39 -6H42C48 -6 51 -9 51 -15C51 -21 48 -24 42 -24H39V-6Z" fill="#6A2C91"/>
+    <path d="M63 0V-30H70V-18H83V-30H90V0H83V-12H70V0H63Z" fill="#6A2C91"/>
+    <path d="M95 0V-30H102L117 -10V-30H124V0H117L102 -20V0H95Z" fill="#6A2C91"/>
+    
+    <!-- AI -->
+    <path d="M130 0V-3H132V-27H130V-30H140V-27H138V-3H140V0H130Z" fill="#FF9933"/>
+    <path d="M145 0V-30H152V0H145Z" fill="#FF9933"/>
+  </g>
+  
+  <!-- Gradient definitions -->
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6A2C91" />
+      <stop offset="100%" stop-color="#4A1D64" />
+    </linearGradient>
+  </defs>
+</svg>

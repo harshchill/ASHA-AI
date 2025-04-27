@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle with gradient -->
+  <circle cx="60" cy="60" r="60" fill="url(#gradient)" />
+  
+  <!-- Letter "A" in stylized form -->
+  <path d="M45 85V35H65C75 35 82 42 82 52C82 62 75 69 65 69H52V85H45Z" fill="#ffffff"/>
+  <path d="M52 63H64C71 63 75 58 75 52C75 46 71 41 64 41H52V63Z" fill="#6A2C91"/>
+  
+  <!-- Decorative elements representing chat bubbles -->
+  <circle cx="92" cy="40" r="8" fill="#FF9933"/>
+  <circle cx="92" cy="60" r="6" fill="#ffffff" opacity="0.8"/>
+  <circle cx="92" cy="76" r="4" fill="#ffffff" opacity="0.6"/>
+  
+  <!-- Gradient definitions -->
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6A2C91" />
+      <stop offset="100%" stop-color="#4A1D64" />
+    </linearGradient>
+  </defs>
+</svg>
