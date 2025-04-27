@@ -1,4 +1,4 @@
-import { useState, useRef, KeyboardEvent } from "react";
+import { useState, useRef, KeyboardEvent, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import VoiceButton from "./voice-button";
 import useSpeechRecognition from "@/hooks/use-speech-recognition";
@@ -30,11 +30,11 @@ const ChatInput = ({
   } = useSpeechRecognition();
 
   // Update message when transcript changes
-  useState(() => {
+  useEffect(() => {
     if (transcript) {
       setMessage(transcript);
     }
-  });
+  }, [transcript]);
 
   const handleSendMessage = () => {
     if (message.trim() && !isLoading) {

@@ -12,6 +12,15 @@ interface ChatCompletionRequest {
 
 export async function getChatCompletion(request: ChatCompletionRequest): Promise<string> {
   try {
+    console.log("Starting chat completion with Groq API");
+    
+    // Set a timeout of 15 seconds
+    const timeoutPromise = new Promise<string>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error("Groq API request timed out after 15 seconds"));
+      }, 15000);
+    });
+    
     const systemMessage = {
       role: "system" as const,
       content: "You are Asha AI, an intelligent, responsive, and ethical virtual assistant developed for the JobsForHer Foundation platform. You help users explore career opportunities, mentorships, and more. Keep your answers concise, helpful, and focused on women's career development and JobsForHer services. Your tone should be warm, professional, and encouraging.",
@@ -23,12 +32,19 @@ export async function getChatCompletion(request: ChatCompletionRequest): Promise
       content: msg.content
     }));
     
-    const response = await groq.chat.completions.create({
+    // Promise that performs the actual API request
+    const apiPromise = groq.chat.completions.create({
       model: "llama3-70b-8192",
       messages: [systemMessage, ...formattedMessages],
+      max_tokens: 1024, // Limit response length
+    }).then(response => {
+      return response.choices[0].message.content || "I'm sorry, I couldn't generate a response at this time.";
     });
 
-    return response.choices[0].message.content || "I'm sorry, I couldn't generate a response at this time.";
+    // Race between the API call and the timeout
+    const response = await Promise.race([apiPromise, timeoutPromise]);
+    console.log("Successfully completed chat with Groq API");
+    return response;
   } catch (error) {
     console.error("Error getting chat completion:", error);
     console.error("Error details:", JSON.stringify(error, null, 2));
@@ -38,7 +54,17 @@ export async function getChatCompletion(request: ChatCompletionRequest): Promise
 
 export async function getCareerAdvice(query: string): Promise<string> {
   try {
-    const response = await groq.chat.completions.create({
+    console.log("Starting career advice request with Groq API");
+    
+    // Set a timeout of 15 seconds
+    const timeoutPromise = new Promise<string>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error("Groq API career advice request timed out after 15 seconds"));
+      }, 15000);
+    });
+    
+    // Promise that performs the actual API request
+    const apiPromise = groq.chat.completions.create({
       model: "llama3-70b-8192",
       messages: [
         {
@@ -50,9 +76,15 @@ export async function getCareerAdvice(query: string): Promise<string> {
           content: query,
         },
       ],
+      max_tokens: 1024, // Limit response length
+    }).then(response => {
+      return response.choices[0].message.content || "I'm sorry, I couldn't generate career advice at this time.";
     });
 
-    return response.choices[0].message.content || "I'm sorry, I couldn't generate career advice at this time.";
+    // Race between the API call and the timeout
+    const response = await Promise.race([apiPromise, timeoutPromise]);
+    console.log("Successfully completed career advice with Groq API");
+    return response;
   } catch (error) {
     console.error("Error getting career advice:", error);
     console.error("Error details:", JSON.stringify(error, null, 2));
@@ -62,7 +94,17 @@ export async function getCareerAdvice(query: string): Promise<string> {
 
 export async function getMentorshipInfo(query: string): Promise<string> {
   try {
-    const response = await groq.chat.completions.create({
+    console.log("Starting mentorship info request with Groq API");
+    
+    // Set a timeout of 15 seconds
+    const timeoutPromise = new Promise<string>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error("Groq API mentorship info request timed out after 15 seconds"));
+      }, 15000);
+    });
+    
+    // Promise that performs the actual API request
+    const apiPromise = groq.chat.completions.create({
       model: "llama3-70b-8192",
       messages: [
         {
@@ -74,9 +116,15 @@ export async function getMentorshipInfo(query: string): Promise<string> {
           content: query,
         },
       ],
+      max_tokens: 1024, // Limit response length
+    }).then(response => {
+      return response.choices[0].message.content || "I'm sorry, I couldn't generate mentorship information at this time.";
     });
 
-    return response.choices[0].message.content || "I'm sorry, I couldn't generate mentorship information at this time.";
+    // Race between the API call and the timeout
+    const response = await Promise.race([apiPromise, timeoutPromise]);
+    console.log("Successfully completed mentorship info with Groq API");
+    return response;
   } catch (error) {
     console.error("Error getting mentorship info:", error);
     console.error("Error details:", JSON.stringify(error, null, 2));
