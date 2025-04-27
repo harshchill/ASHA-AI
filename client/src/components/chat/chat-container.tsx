@@ -10,9 +10,10 @@ interface ChatContainerProps {
   messages: Message[];
   isLoading: boolean;
   isTtsEnabled: boolean;
+  onSendMessage?: (text: string) => void;
 }
 
-const ChatContainer = ({ messages, isLoading, isTtsEnabled }: ChatContainerProps) => {
+const ChatContainer = ({ messages, isLoading, isTtsEnabled, onSendMessage }: ChatContainerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const { speak } = useTextToSpeech();
   const { toast } = useToast();
@@ -24,15 +25,15 @@ const ChatContainer = ({ messages, isLoading, isTtsEnabled }: ChatContainerProps
     }
   }, [messages, isLoading]);
 
-  // Speak latest assistant message if TTS is enabled
-  useEffect(() => {
-    if (messages.length > 0 && isTtsEnabled) {
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage.role === "assistant") {
-        speak(lastMessage.content);
-      }
-    }
-  }, [messages, isTtsEnabled, speak]);
+  // Commenting out automatic TTS to prevent repeated voice playback
+  // useEffect(() => {
+  //   if (messages.length > 0 && isTtsEnabled) {
+  //     const lastMessage = messages[messages.length - 1];
+  //     if (lastMessage.role === "assistant") {
+  //       speak(lastMessage.content);
+  //     }
+  //   }
+  // }, [messages, isTtsEnabled, speak]);
 
   const handleSpeakMessage = (text: string) => {
     speak(text);
@@ -53,7 +54,7 @@ const ChatContainer = ({ messages, isLoading, isTtsEnabled }: ChatContainerProps
     >
       {/* Show welcome message if no messages yet */}
       {messages.length === 0 && (
-        <WelcomeMessage onSuggestionClick={() => {}} />
+        <WelcomeMessage onSuggestionClick={(text) => onSendMessage?.(text)} />
       )}
 
       {/* Render all messages */}

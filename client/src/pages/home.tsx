@@ -112,6 +112,7 @@ const Home = () => {
         messages={messages}
         isLoading={isLoading}
         isTtsEnabled={isTtsEnabled}
+        onSendMessage={handleSendMessage}
       />
       <ChatInput 
         onSendMessage={handleSendMessage}
