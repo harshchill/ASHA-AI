@@ -5,14 +5,14 @@ interface ChatCompletionResponse {
     id: number;
     role: string;
     content: string;
-    timestamp: string;
+    timestamp: string | Date;
     sessionId: string;
   };
   assistantMessage: {
     id: number;
     role: string;
     content: string;
-    timestamp: string;
+    timestamp: string | Date;
     sessionId: string;
   };
 }
