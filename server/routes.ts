@@ -54,16 +54,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const lowerCaseContent = userMessage.content.toLowerCase();
       
-      // Expanded career-related keywords for better matching
-      if (lowerCaseContent.includes('career') || 
-          lowerCaseContent.includes('job') || 
+      // Expanded job-related keywords for better matching
+      if (lowerCaseContent.includes('job') || 
+          lowerCaseContent.includes('career') || 
           lowerCaseContent.includes('work') ||
           lowerCaseContent.includes('employment') ||
           lowerCaseContent.includes('salary') ||
+          lowerCaseContent.includes('pay') ||
           lowerCaseContent.includes('interview') ||
           lowerCaseContent.includes('resume') ||
+          lowerCaseContent.includes('cv') ||
+          lowerCaseContent.includes('application') ||
+          lowerCaseContent.includes('apply') ||
+          lowerCaseContent.includes('position') ||
+          lowerCaseContent.includes('opportunity') ||
           lowerCaseContent.includes('skill') ||
-          lowerCaseContent.includes('opportunity')) {
+          lowerCaseContent.includes('procedure') ||
+          lowerCaseContent.includes('experience') ||
+          lowerCaseContent.includes('qualification') ||
+          lowerCaseContent.includes('hire') ||
+          lowerCaseContent.includes('employer') ||
+          lowerCaseContent.includes('tech') ||
+          lowerCaseContent.includes('industry')) {
         console.log("Processing as career advice request");
         aiResponse = await getCareerAdvice(userMessage.content);
       } 
@@ -72,7 +84,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
                lowerCaseContent.includes('mentorship') ||
                lowerCaseContent.includes('guidance') ||
                lowerCaseContent.includes('coach') ||
-               lowerCaseContent.includes('advisor')) {
+               lowerCaseContent.includes('advisor') ||
+               lowerCaseContent.includes('support') ||
+               lowerCaseContent.includes('help') ||
+               lowerCaseContent.includes('network') ||
+               lowerCaseContent.includes('connection') ||
+               lowerCaseContent.includes('grow') ||
+               lowerCaseContent.includes('advice') ||
+               lowerCaseContent.includes('learn')) {
         console.log("Processing as mentorship request");
         aiResponse = await getMentorshipInfo(userMessage.content);
       } 

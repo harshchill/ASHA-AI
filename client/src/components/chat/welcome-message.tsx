@@ -6,10 +6,11 @@ interface WelcomeMessageProps {
 
 const WelcomeMessage = ({ onSuggestionClick }: WelcomeMessageProps) => {
   const suggestions = [
-    "💼 Professional development strategies",
-    "🌟 Executive mentorship programs",
+    "💼 Job opportunities in tech industry",
+    "📝 Resume building tips for women",
     "🔄 Career transition planning",
-    "📈 Leadership opportunities"
+    "🏢 Job application procedures",
+    "👔 Interview preparation tips"
   ];
 
   return (
@@ -19,7 +20,7 @@ const WelcomeMessage = ({ onSuggestionClick }: WelcomeMessageProps) => {
         <h2 className="font-poppins font-semibold text-[#6A2C91]">Namaste!</h2>
       </div>
       <p className="text-sm mb-3">
-        Welcome to Asha AI. As your professional assistant from JobsForHer Foundation, I can provide structured guidance on career development, mentorship opportunities, and professional advancement strategies.
+        Welcome to Asha AI. As your professional assistant from JobsForHer Foundation, I'm here to help women with job-related queries. Ask about job opportunities, application procedures, interview preparation, or resume building. I'm designed to support your career journey.
       </p>
       <div className="flex flex-wrap gap-2 mt-2">
         {suggestions.map((suggestion, index) => (

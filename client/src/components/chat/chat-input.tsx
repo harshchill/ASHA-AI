@@ -81,7 +81,7 @@ const ChatInput = ({
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             className="flex-1 bg-transparent border-none outline-none text-sm placeholder-neutral-700/50 font-medium"
-            placeholder={isListening ? "🎤 Listening..." : "💬 Enter your professional inquiry..."}
+            placeholder={isListening ? "🎤 Listening..." : "💬 Ask your professional query..."}
             disabled={isLoading || isListening}
           />
           <Button 
