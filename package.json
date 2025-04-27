@@ -65,7 +65,12 @@
     "wouter": "^3.3.5",
     "clsx": "^2.1.1",
     "tailwind-merge": "^2.6.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "class-variance-authority": "^0.7.0",
+    "embla-carousel-react": "^8.0.0",
+    "lucide-react": "^0.358.0",
+    "react-day-picker": "^8.10.0",
+    "cmdk": "^1.0.0"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
