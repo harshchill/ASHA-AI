@@ -129,7 +129,7 @@ const ChatMessage = ({ message, onSpeakMessage }: ChatMessageProps) => {
   return (
     <div className={`flex items-end gap-2 max-w-[85%] ${isUser ? 'self-end' : 'self-start'} mb-4`}>
       {!isUser && (
-        <div className="w-8 h-8 rounded-full bg-[#6A2C91] flex items-center justify-center text-white flex-shrink-0 shadow-md">
+        <div className={`w-8 h-8 rounded-full ${colorScheme.avatarBg} flex items-center justify-center text-white flex-shrink-0 shadow-md`}>
           <i className="ri-customer-service-2-line text-sm"></i>
         </div>
       )}
@@ -137,13 +137,18 @@ const ChatMessage = ({ message, onSpeakMessage }: ChatMessageProps) => {
       <div className={`relative chat-bubble-tail ${
         isUser 
           ? 'chat-bubble-user bg-gradient-to-br from-[#6A2C91]/10 to-[#6A2C91]/5 rounded-t-lg rounded-l-lg border border-[#6A2C91]/10' 
-          : 'chat-bubble-assistant bg-white rounded-t-lg rounded-r-lg border border-gray-200'
+          : `chat-bubble-assistant ${colorScheme.messageBg} rounded-t-lg rounded-r-lg border ${colorScheme.messageBorder}`
         } p-4 shadow-sm`}>
+        {!isUser && confidenceState.supportLevel === 'high-support' && (
+          <div className={`text-xs ${colorScheme.supportTextColor} mb-2 italic`}>
+            {supportivePhrase}
+          </div>
+        )}
         {isUser ? (
           <p className="text-sm leading-relaxed whitespace-pre-line">{formattedContent}</p>
         ) : (
           <p 
-            className="text-sm leading-relaxed"
+            className={`text-sm leading-relaxed ${colorScheme.messageTextStyle}`}
             dangerouslySetInnerHTML={{ __html: formattedContent }}
           />
         )}
@@ -156,7 +161,7 @@ const ChatMessage = ({ message, onSpeakMessage }: ChatMessageProps) => {
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="p-1 h-auto text-[#6A2C91]/70 hover:text-[#6A2C91] transition-colors flex items-center"
+                    className={`p-1 h-auto ${colorScheme.keyPointsButtonColor} transition-colors flex items-center`}
                   >
                     <i className="ri-lightbulb-flash-line mr-1 text-amber-500"></i>
                     <span className="text-xs">Key Points</span>
@@ -164,15 +169,17 @@ const ChatMessage = ({ message, onSpeakMessage }: ChatMessageProps) => {
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle className="text-[#6A2C91]">💡 Key Points</DialogTitle>
+                    <DialogTitle className={colorScheme.titleColor}>💡 Key Points</DialogTitle>
                     <DialogDescription>
-                      Important highlights from Asha's response
+                      {confidenceState.emotionTone === 'anxious' 
+                        ? 'Here are some helpful points to remember' 
+                        : 'Important highlights from Asha\'s response'}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="mt-4 space-y-2">
                     {keyPoints.map((point, index) => (
-                      <div key={index} className="flex items-start gap-2 p-2 rounded-md bg-purple-50">
-                        <div className="w-5 h-5 bg-[#6A2C91] rounded-full flex items-center justify-center text-white flex-shrink-0 mt-0.5">
+                      <div key={index} className={`flex items-start gap-2 p-2 rounded-md ${colorScheme.keyPointBg}`}>
+                        <div className={`w-5 h-5 ${colorScheme.keyPointNumberBg} rounded-full flex items-center justify-center text-white flex-shrink-0 mt-0.5`}>
                           {index + 1}
                         </div>
                         <p className="text-sm text-gray-800">{point}</p>
@@ -185,7 +192,7 @@ const ChatMessage = ({ message, onSpeakMessage }: ChatMessageProps) => {
             <Button 
               variant="ghost" 
               size="sm" 
-              className="p-1 h-auto hover:text-[#6A2C91] transition-colors"
+              className={`p-1 h-auto ${colorScheme.keyPointsButtonColor} transition-colors`}
               onClick={() => onSpeakMessage(message.content)}
               title="Listen to response"
             >

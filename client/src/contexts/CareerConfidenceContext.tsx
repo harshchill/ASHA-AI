@@ -50,13 +50,25 @@ export const useCareerConfidence = (): CareerConfidenceContextType => {
 };
 
 // Utility functions
-export const getColorSchemeForConfidence = (confidenceState: CareerConfidenceState): {
+// Define ColorScheme type for reuse
+export type ColorScheme = {
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
   textColor: string;
   borderStyle: string;
-} => {
+  avatarBg: string;
+  messageBg: string;
+  messageBorder: string;
+  supportTextColor: string;
+  messageTextStyle: string;
+  keyPointsButtonColor: string;
+  titleColor: string;
+  keyPointBg: string;
+  keyPointNumberBg: string;
+};
+
+export const getColorSchemeForConfidence = (confidenceState: CareerConfidenceState): ColorScheme => {
   const { confidenceLevel, emotionTone } = confidenceState;
   
   // Default moderate scheme
@@ -65,8 +77,17 @@ export const getColorSchemeForConfidence = (confidenceState: CareerConfidenceSta
     secondaryColor: '#9D5CC2',
     accentColor: '#EBE5F1',
     textColor: '#4B4B4B',
-    borderStyle: 'border-[#6A2C91]/20'
-  };
+    borderStyle: 'border-[#6A2C91]/20',
+    avatarBg: 'bg-[#6A2C91]',
+    messageBg: 'bg-white',
+    messageBorder: 'border-gray-200',
+    supportTextColor: 'text-[#6A2C91]/70',
+    messageTextStyle: 'text-gray-800',
+    keyPointsButtonColor: 'text-[#6A2C91]/70 hover:text-[#6A2C91]',
+    titleColor: 'text-[#6A2C91]',
+    keyPointBg: 'bg-purple-50',
+    keyPointNumberBg: 'bg-[#6A2C91]'
+  } as ColorScheme;
   
   // Adjust based on confidence level and emotion tone
   if (confidenceLevel === 'low' && emotionTone === 'anxious') {
@@ -76,8 +97,17 @@ export const getColorSchemeForConfidence = (confidenceState: CareerConfidenceSta
       secondaryColor: '#7FB3F5',
       accentColor: '#E9F2FD',
       textColor: '#4B4B4B',
-      borderStyle: 'border-[#4A90E2]/20'
-    };
+      borderStyle: 'border-[#4A90E2]/20',
+      avatarBg: 'bg-[#4A90E2]',
+      messageBg: 'bg-blue-50',
+      messageBorder: 'border-blue-100',
+      supportTextColor: 'text-blue-700',
+      messageTextStyle: 'text-gray-800 font-medium',
+      keyPointsButtonColor: 'text-blue-700 hover:text-blue-800',
+      titleColor: 'text-blue-700',
+      keyPointBg: 'bg-blue-50',
+      keyPointNumberBg: 'bg-[#4A90E2]'
+    } as ColorScheme;
   } else if (confidenceLevel === 'low' && emotionTone === 'neutral') {
     // Supportive but light scheme
     scheme = {
@@ -85,8 +115,17 @@ export const getColorSchemeForConfidence = (confidenceState: CareerConfidenceSta
       secondaryColor: '#8AB5DF',
       accentColor: '#EEF5FC',
       textColor: '#4B4B4B',
-      borderStyle: 'border-[#5C94CC]/20'
-    };
+      borderStyle: 'border-[#5C94CC]/20',
+      avatarBg: 'bg-[#5C94CC]',
+      messageBg: 'bg-blue-50/50',
+      messageBorder: 'border-blue-100/70',
+      supportTextColor: 'text-blue-600/80',
+      messageTextStyle: 'text-gray-800',
+      keyPointsButtonColor: 'text-blue-600/70 hover:text-blue-700',
+      titleColor: 'text-blue-600',
+      keyPointBg: 'bg-blue-50/60',
+      keyPointNumberBg: 'bg-[#5C94CC]'
+    } as ColorScheme;
   } else if (confidenceLevel === 'medium' && emotionTone === 'anxious') {
     // Balanced but reassuring scheme
     scheme = {
@@ -94,8 +133,17 @@ export const getColorSchemeForConfidence = (confidenceState: CareerConfidenceSta
       secondaryColor: '#96A3D8',
       accentColor: '#EEEEF9',
       textColor: '#4B4B4B',
-      borderStyle: 'border-[#6A7FBF]/20'
-    };
+      borderStyle: 'border-[#6A7FBF]/20',
+      avatarBg: 'bg-[#6A7FBF]',
+      messageBg: 'bg-indigo-50/50',
+      messageBorder: 'border-indigo-100',
+      supportTextColor: 'text-indigo-700/80',
+      messageTextStyle: 'text-gray-800',
+      keyPointsButtonColor: 'text-indigo-700/70 hover:text-indigo-800',
+      titleColor: 'text-indigo-700',
+      keyPointBg: 'bg-indigo-50',
+      keyPointNumberBg: 'bg-[#6A7FBF]'
+    } as ColorScheme;
   } else if (confidenceLevel === 'high' && (emotionTone === 'confident' || emotionTone === 'neutral')) {
     // Empowering, vibrant scheme
     scheme = {
@@ -103,8 +151,17 @@ export const getColorSchemeForConfidence = (confidenceState: CareerConfidenceSta
       secondaryColor: '#5BA55E',
       accentColor: '#E8F5E9',
       textColor: '#3E3E3E',
-      borderStyle: 'border-[#2E7D32]/20'
-    };
+      borderStyle: 'border-[#2E7D32]/20',
+      avatarBg: 'bg-[#2E7D32]',
+      messageBg: 'bg-green-50',
+      messageBorder: 'border-green-100',
+      supportTextColor: 'text-green-700',
+      messageTextStyle: 'text-gray-800',
+      keyPointsButtonColor: 'text-green-700/70 hover:text-green-800',
+      titleColor: 'text-green-700',
+      keyPointBg: 'bg-green-50',
+      keyPointNumberBg: 'bg-[#2E7D32]'
+    } as ColorScheme;
   }
   
   return scheme;

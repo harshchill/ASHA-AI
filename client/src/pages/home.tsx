@@ -7,7 +7,11 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useCareerConfidence } from "@/contexts/CareerConfidenceContext";
+import { 
+  useCareerConfidence, 
+  getColorSchemeForConfidence, 
+  getSupportivePhrase 
+} from "@/contexts/CareerConfidenceContext";
 import { Message } from "@/types";
 
 const Home = () => {
@@ -187,12 +191,28 @@ const Home = () => {
     }, 500);
   };
 
+  // Get color scheme based on confidence level
+  const colorScheme = getColorSchemeForConfidence(confidenceState);
+  const supportivePhrase = getSupportivePhrase(confidenceState);
+  const showSupportBanner = confidenceState.confidenceLevel === 'low' || 
+                          (confidenceState.confidenceLevel === 'medium' && confidenceState.emotionTone === 'anxious');
+
   return (
     <div className="flex flex-col h-screen max-w-5xl mx-auto bg-white shadow-lg">
       <ChatHeader 
         onReset={resetChat} 
         onSelectSession={handleSelectSession}
       />
+      
+      {showSupportBanner && (
+        <div className={`py-2 px-4 text-sm ${
+          confidenceState.confidenceLevel === 'low' ? 'bg-blue-50 text-blue-700' : 'bg-indigo-50 text-indigo-700'
+        } flex items-center justify-center gap-2 border-b`}>
+          <i className="ri-heart-pulse-line"></i>
+          <span>{supportivePhrase}</span>
+        </div>
+      )}
+      
       <ChatContainer 
         messages={messages}
         isLoading={isLoading}
