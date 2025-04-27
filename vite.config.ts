@@ -16,19 +16,8 @@ export default defineConfig({
     },
   },
   root: resolve(__dirname, 'client'),
-  optimizeDeps: {
-    include: ['@tanstack/react-query']
-  },
   build: {
     outDir: resolve(__dirname, 'dist/public'),
     emptyOutDir: true,
-    rollupOptions: {
-      external: [],
-      output: {
-        manualChunks: {
-          'react-query': ['@tanstack/react-query']
-        }
-      }
-    }
   },
 })
