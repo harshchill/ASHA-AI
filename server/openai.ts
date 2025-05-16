@@ -47,6 +47,12 @@ interface StructuredResponse {
 
 export async function getChatCompletion(request: ChatCompletionRequest): Promise<string> {
   try {
+    // Validate Groq API key
+    if (!process.env.GROQ_API_KEY) {
+      console.error("GROQ_API_KEY environment variable is not set");
+      throw new Error("GROQ_API_KEY is required");
+    }
+
     console.log("Starting chat completion with Groq API");
     
     // Set a timeout of 10 seconds for faster fallback
@@ -66,9 +72,10 @@ export async function getChatCompletion(request: ChatCompletionRequest): Promise
     ]);
     
     console.log(`Detected or specified language: ${detectedLanguage}`);
+    console.log('RAG Data fetched:', JSON.stringify(ragData));
     
     // Create enhanced system message with RAG data
-    let systemContent = `You are Asha AI, a specialized job assistant for the JobsForHer platform.
+    let systemContent = `You are Asha AI, a specialized job assistant for the JobsForHer platform. You must respond in JSON format.
 
 CURRENT CONTEXT:
 ${ragData.statistics?.map(s => `- ${s.value} (Source: ${s.source})`).join('\n') || 'No current statistics available'}
@@ -97,13 +104,13 @@ CONSTRAINTS:
 - Format URLs as proper markdown links
 - Limit response to 5-7 key points
 
-OUTPUT FORMAT:
+IMPORTANT: You must respond with a valid JSON object in the following format:
 {
-  "understanding": "string",
-  "keyPoints": ["string"],
-  "statistics": [{"value": "string", "source": "string"}],
-  "resources": [{"text": "string", "url": "string"}],
-  "followUp": "string"
+  "understanding": "string with greeting and context",
+  "keyPoints": ["array of formatted points"],
+  "statistics": [{"value": "stat", "source": "source"}],
+  "resources": [{"text": "link text", "url": "url"}],
+  "followUp": "follow-up question"
 }`;
 
     // Add language instruction
@@ -126,18 +133,25 @@ OUTPUT FORMAT:
     const apiPromise = groq.chat.completions.create({
       model: "llama3-70b-8192",
       messages: [systemMessage, ...formattedMessages],
-      max_tokens: 800, // Increased for structured output
-      temperature: 0.7, // Balanced between creativity and focus
-      response_format: { type: "json_object" } // Enable structured JSON output
+      max_tokens: 800,
+      temperature: 0.7,
+      response_format: { type: "json_object" }
     }).then(response => {
+      if (!response || !response.choices || !response.choices[0]) {
+        console.error("Invalid response from Groq API:", response);
+        throw new Error("Invalid response structure from Groq API");
+      }
+      
       const content = response.choices[0].message.content;
       if (!content) {
+        console.error("No content in Groq API response");
         return getLanguageSpecificError(detectedLanguage as SupportedLanguage);
       }
       
       try {
         // Parse the JSON response
         const structured = JSON.parse(content) as StructuredResponse;
+        console.log("Successfully parsed Groq response");
         
         // Format the response in a user-friendly way
         return `${structured.understanding}\n\n${structured.keyPoints.join('\n\n')}${
@@ -150,7 +164,8 @@ OUTPUT FORMAT:
             `- [${r.text}](${r.url})`).join('\n') : ''
         }\n\n${structured.followUp}`;
       } catch (e) {
-        console.error('Error parsing structured response:', e);
+        console.error('Error parsing Groq response:', e);
+        console.error('Raw content:', content);
         return content; // Fallback to raw content if parsing fails
       }
     });
@@ -160,8 +175,28 @@ OUTPUT FORMAT:
     console.log("Successfully completed chat with Groq API");
     return response;
   } catch (error) {
-    console.error("Error getting chat completion:", error);
+    // Enhanced error logging
+    console.error("Error getting chat completion:");
+    if (error instanceof Error) {
+      console.error("Error name:", error.name);
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    } else {
+      console.error("Unknown error type:", error);
+    }
     console.error("Error details:", JSON.stringify(error, null, 2));
+    
+    // Check if it's an API key error
+    if (error instanceof Error && 
+        (error.message.includes("API key") || error.message.includes("GROQ_API_KEY"))) {
+      return "Authentication error with our AI service. Please contact support with error code: GROQ_AUTH_ERR";
+    }
+    
+    // Check if it's a timeout error
+    if (error instanceof Error && error.message.includes("timed out")) {
+      return "Our AI service is taking longer than expected to respond. Please try again in a moment.";
+    }
+    
     return "We're currently experiencing technical difficulties with our career assistant. Please try your request again in a few moments or contact JobsForHer support if the issue persists.";
   }
 }
@@ -288,8 +323,28 @@ OUTPUT FORMAT:
     console.log("Successfully completed career advice with Groq API");
     return response;
   } catch (error) {
-    console.error("Error getting career advice:", error);
+    // Enhanced error logging
+    console.error("Error getting career advice:");
+    if (error instanceof Error) {
+      console.error("Error name:", error.name);
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    } else {
+      console.error("Unknown error type:", error);
+    }
     console.error("Error details:", JSON.stringify(error, null, 2));
+    
+    // Check if it's an API key error
+    if (error instanceof Error && 
+        (error.message.includes("API key") || error.message.includes("GROQ_API_KEY"))) {
+      return "Authentication error with our AI service. Please contact support with error code: GROQ_AUTH_ERR";
+    }
+    
+    // Check if it's a timeout error
+    if (error instanceof Error && error.message.includes("timed out")) {
+      return "Our AI service is taking longer than expected to respond. Please try again in a moment.";
+    }
+    
     return "We apologize, but our career advisory service is temporarily unavailable. Please try your query again shortly.";
   }
 }
@@ -404,8 +459,28 @@ OUTPUT FORMAT:
     console.log("Successfully completed mentorship info with Groq API");
     return response;
   } catch (error) {
-    console.error("Error getting mentorship info:", error);
+    // Enhanced error logging
+    console.error("Error getting mentorship info:");
+    if (error instanceof Error) {
+      console.error("Error name:", error.name);
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    } else {
+      console.error("Unknown error type:", error);
+    }
     console.error("Error details:", JSON.stringify(error, null, 2));
+    
+    // Check if it's an API key error
+    if (error instanceof Error && 
+        (error.message.includes("API key") || error.message.includes("GROQ_API_KEY"))) {
+      return "Authentication error with our AI service. Please contact support with error code: GROQ_AUTH_ERR";
+    }
+    
+    // Check if it's a timeout error
+    if (error instanceof Error && error.message.includes("timed out")) {
+      return "Our AI service is taking longer than expected to respond. Please try again in a moment.";
+    }
+    
     return "We regret to inform you that our mentorship information service is temporarily unavailable. Please try your request again shortly.";
   }
 }
@@ -433,7 +508,8 @@ export async function analyzeCareerConfidence(text: string): Promise<CareerConfi
       messages: [
         {
           role: "system" as const,
-          content: `You are an expert career counselor who specializes in analyzing career confidence levels from text. 
+          content: `You are an expert career counselor who specializes in analyzing career confidence levels from text. You must respond in JSON format.
+
 Your task is to assess the input text for:
 1. Career confidence level (low/medium/high)
 2. Emotional tone regarding career (negative/neutral/positive)
@@ -446,7 +522,7 @@ Consider these factors:
 - Level of self-advocacy
 - Requests for guidance or validation
 
-OUTPUT FORMAT:
+IMPORTANT: You must respond with a valid JSON object in the following format:
 {
   "confidenceLevel": "low" | "medium" | "high",
   "emotionTone": "negative" | "neutral" | "positive",
