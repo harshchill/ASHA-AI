@@ -1,4 +1,5 @@
 import { Groq } from "groq-sdk";
+import { fetchRelevantData } from './rag';
 
 // Initialize Groq client
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -36,6 +37,14 @@ export function detectLanguage(text: string): SupportedLanguage {
   return 'english';
 }
 
+interface StructuredResponse {
+  understanding: string;
+  keyPoints: string[];
+  statistics: Array<{ value: string; source: string }>;
+  resources: Array<{ text: string; url: string }>;
+  followUp: string;
+}
+
 export async function getChatCompletion(request: ChatCompletionRequest): Promise<string> {
   try {
     console.log("Starting chat completion with Groq API");
@@ -47,20 +56,61 @@ export async function getChatCompletion(request: ChatCompletionRequest): Promise
       }, 10000);
     });
     
-    // Determine language from request or detect from last message
-    const detectedLanguage = request.language || 
-      (request.messages.length > 0 ? detectLanguage(request.messages[request.messages.length - 1].content) : 'english');
+    // Get the last message content safely
+    const lastMessageContent = request.messages.length > 0 ? request.messages[request.messages.length - 1].content : '';
+    
+    // Determine language and fetch relevant data in parallel
+    const [detectedLanguage, ragData] = await Promise.all([
+      Promise.resolve(request.language || detectLanguage(lastMessageContent)),
+      fetchRelevantData(lastMessageContent)
+    ]);
     
     console.log(`Detected or specified language: ${detectedLanguage}`);
     
-    // Create language-specific system message
-    let systemContent = "You are Asha AI, a specialized job assistant for the JobsForHer platform. Format your responses as follows:\n\n1. Be extremely concise and minimalist - use 5-7 key points maximum\n2. Use simple emoji prefixes for each point (no emoji variations)\n3. Bold only the most essential words or phrases\n4. Avoid unnecessary text, headings, or explanations\n5. Focus only on the most practical, actionable job advice\n6. Use simple bullet points with minimal structure\n7. Leave space between points for readability\n8. No introductions or conclusions needed\n9. Use plain language that's immediately actionable\n10. Focus solely on employment guidance for women";
-    
+    // Create enhanced system message with RAG data
+    let systemContent = `You are Asha AI, a specialized job assistant for the JobsForHer platform.
+
+CURRENT CONTEXT:
+${ragData.statistics?.map(s => `- ${s.value} (Source: ${s.source})`).join('\n') || 'No current statistics available'}
+
+RELEVANT RESOURCES:
+${ragData.resources?.map(r => `- [${r.text}](${r.url})`).join('\n') || 'No specific resources available'}
+
+RESPONSE FORMAT:
+1. Always start with a polite greeting in the user's language
+2. Present information in clear, distinct sections:
+   - Understanding: Brief restatement of the user's needs
+   - Response: Key points using emojis as prefixes
+   - Follow-up: Gentle prompt for more specific questions
+
+FORMATTING RULES:
+- Use **bold** for key terms and important phrases
+- Structure responses as clear bullet points
+- Keep points concise and actionable
+- Include relevant statistics when available
+- Add clickable links to JobsForHer resources
+
+CONSTRAINTS:
+- Focus solely on women's professional development
+- Maintain cultural sensitivity
+- Cite sources for any statistics
+- Format URLs as proper markdown links
+- Limit response to 5-7 key points
+
+OUTPUT FORMAT:
+{
+  "understanding": "string",
+  "keyPoints": ["string"],
+  "statistics": [{"value": "string", "source": "string"}],
+  "resources": [{"text": "string", "url": "string"}],
+  "followUp": "string"
+}`;
+
     // Add language instruction
     if (detectedLanguage !== 'english') {
       systemContent += `\n\nIMPORTANT: Respond in ${detectedLanguage} language. Ensure all text is in ${detectedLanguage}, not English.`;
     }
-    
+
     const systemMessage = {
       role: "system" as const,
       content: systemContent,
@@ -76,29 +126,35 @@ export async function getChatCompletion(request: ChatCompletionRequest): Promise
     const apiPromise = groq.chat.completions.create({
       model: "llama3-70b-8192",
       messages: [systemMessage, ...formattedMessages],
-      max_tokens: 600, // Reduced tokens for faster response
-      temperature: 0.5, // More focused responses
+      max_tokens: 800, // Increased for structured output
+      temperature: 0.7, // Balanced between creativity and focus
+      response_format: { type: "json_object" } // Enable structured JSON output
     }).then(response => {
       const content = response.choices[0].message.content;
       if (!content) {
-        // Provide language-specific fallback message
-        if (detectedLanguage === 'hindi') {
-          return "मुझे खेद है, मैं इस समय आपके करियर से संबंधित प्रश्न को संसाधित नहीं कर सकती। कृपया थोड़ी देर बाद फिर से प्रयास करें।";
-        } else if (detectedLanguage === 'tamil') {
-          return "மன்னிக்கவும், நான் தற்போது உங்கள் வேலை தொடர்பான வினவலை செயலாக்க முடியவில்லை. சிறிது நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.";
-        } else if (detectedLanguage === 'telugu') {
-          return "క్షమించండి, నేను ప్రస్తుతం మీ ఉద్యోగ సంబంధిత ప్రశ్నను ప్రాసెస్ చేయలేకపోతున్నాను. దయచేసి కొద్ది సేపటి తర్వాత మళ్లీ ప్రయత్నించండి.";
-        } else if (detectedLanguage === 'kannada') {
-          return "ಕ್ಷಮಿಸಿ, ನಾನು ಈ ಸಮಯದಲ್ಲಿ ನಿಮ್ಮ ಉದ್ಯೋಗ ಸಂಬಂಧಿತ ಪ್ರಶ್ನೆಯನ್ನು ಪ್ರಕ್ರಿಯೆಗೊಳಿಸಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ. ದಯವಿಟ್ಟು ಸ್ವಲ್ಪ ಸಮಯದ ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.";
-        } else if (detectedLanguage === 'bengali') {
-          return "দুঃখিত, আমি এই মুহূর্তে আপনার কর্মসংক্রান্ত প্রশ্ন প্রক্রিয়া করতে পারছি না। দয়া করে কিছুক্ষণ পরে আবার চেষ্টা করুন।";
-        } else {
-          return "I'm sorry, I couldn't process your job-related query at the moment. Please try again shortly.";
-        }
+        return getLanguageSpecificError(detectedLanguage as SupportedLanguage);
       }
-      return content;
+      
+      try {
+        // Parse the JSON response
+        const structured = JSON.parse(content) as StructuredResponse;
+        
+        // Format the response in a user-friendly way
+        return `${structured.understanding}\n\n${structured.keyPoints.join('\n\n')}${
+          structured.statistics.length ? '\n\n📊 Statistics:\n' + 
+          structured.statistics.map((s: { value: string; source: string }) => 
+            `- ${s.value} (${s.source})`).join('\n') : ''
+        }${
+          structured.resources.length ? '\n\n📚 Resources:\n' + 
+          structured.resources.map((r: { text: string; url: string }) => 
+            `- [${r.text}](${r.url})`).join('\n') : ''
+        }\n\n${structured.followUp}`;
+      } catch (e) {
+        console.error('Error parsing structured response:', e);
+        return content; // Fallback to raw content if parsing fails
+      }
     });
-
+    
     // Race between the API call and the timeout
     const response = await Promise.race([apiPromise, timeoutPromise]);
     console.log("Successfully completed chat with Groq API");
@@ -108,6 +164,18 @@ export async function getChatCompletion(request: ChatCompletionRequest): Promise
     console.error("Error details:", JSON.stringify(error, null, 2));
     return "We're currently experiencing technical difficulties with our career assistant. Please try your request again in a few moments or contact JobsForHer support if the issue persists.";
   }
+}
+
+function getLanguageSpecificError(language: SupportedLanguage): string {
+  const errors = {
+    hindi: "मुझे खेद है, मैं इस समय आपके करियर से संबंधित प्रश्न को संसाधित नहीं कर सकती। कृपया थोड़ी देर बाद फिर से प्रयास करें।",
+    tamil: "மன்னிக்கவும், நான் தற்போது உங்கள் வேலை தொடர்பான வினவலை செயலாக்க முடியவில்லை. சிறிது நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.",
+    telugu: "క్షమించండి, నేను ప్రస్తుతం మీ ఉద్యోగ సంబంధిత ప్రశ్నను ప్రాసెస్ చేయలేకపోతున్నాను. దయచేసి కొద్ది సేపటి తర్వాత మళ్లీ ప్రయత్నించండి.",
+    kannada: "ಕ್ಷಮಿಸಿ, ನಾನು ಈ ಸಮಯದಲ್ಲಿ ನಿಮ್ಮ ಉದ್ಯೋಗ ಸಂಬಂಧಿತ ಪ್ರಶ್ನೆಯನ್ನು ಪ್ರಕ್ರಿಯೆಗೊಳಿಸಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ. ದಯವಿಟ್ಟು ಸ್ವಲ್ಪ ಸಮಯದ ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+    bengali: "দুঃখিত, আমি এই মুহূর্তে আপনার কর্মসংক্রান্ত প্রশ্ন প্রক্রিয়া করতে পারছি না। দয়া করে কিছুক্ষণ পরে আবার চেষ্টা করুন।",
+    english: "I'm sorry, I couldn't process your job-related query at the moment. Please try again shortly."
+  };
+  return errors[language] || errors.english;
 }
 
 export async function getCareerAdvice(query: string): Promise<string> {
@@ -121,13 +189,53 @@ export async function getCareerAdvice(query: string): Promise<string> {
       }, 10000);
     });
     
-    // Detect language from the query
-    const detectedLanguage = detectLanguage(query);
+    // Detect language and fetch relevant data in parallel
+    const [detectedLanguage, ragData] = await Promise.all([
+      Promise.resolve(detectLanguage(query)),
+      fetchRelevantData(query)
+    ]);
+    
     console.log(`Detected language for career advice: ${detectedLanguage}`);
     
-    // Create language-specific system message
-    let systemContent = "You are Asha AI, a job specialist for the JobsForHer platform focused on women's employment opportunities. Format your responses as follows:\n\n1. Be extremely concise and minimalist - use 5-7 key points maximum\n2. Use simple emoji prefixes for each point (no emoji variations)\n3. Bold only the most essential words or phrases\n4. Avoid unnecessary text, headings, or explanations\n5. Focus only on the most practical, actionable advice\n6. Use simple bullet points with minimal structure\n7. Leave space between points for readability\n8. No introductions or conclusions needed\n9. Use plain language that's immediately actionable\n10. Focus solely on job-related guidance for women";
-    
+    // Create enhanced system message with RAG data
+    let systemContent = `You are Asha AI, a job specialist for the JobsForHer platform focused on women's employment opportunities.
+
+CURRENT CONTEXT:
+${ragData.statistics?.map(s => `- ${s.value} (Source: ${s.source})`).join('\n') || 'No current statistics available'}
+
+RELEVANT RESOURCES:
+${ragData.resources?.map(r => `- [${r.text}](${r.url})`).join('\n') || 'No specific resources available'}
+
+RESPONSE FORMAT:
+1. Start with an empathetic understanding of the career situation
+2. Provide specific, actionable career advice
+3. Include relevant industry statistics when available
+4. Reference specific learning resources or job opportunities
+5. End with a prompt for next steps
+
+FORMATTING RULES:
+- Use **bold** for key skills and job titles
+- Include emoji prefixes for better readability
+- Keep advice practical and immediately actionable
+- Cite sources for any statistics
+- Format URLs as proper markdown links
+
+CONSTRAINTS:
+- Focus on women's career advancement
+- Be culturally sensitive
+- Use professional, encouraging tone
+- Limit to 5-7 main points
+- Include specific JobsForHer opportunities
+
+OUTPUT FORMAT:
+{
+  "understanding": "string",
+  "keyPoints": ["string"],
+  "statistics": [{"value": "string", "source": "string"}],
+  "resources": [{"text": "string", "url": "string"}],
+  "followUp": "string"
+}`;
+
     // Add language instruction
     if (detectedLanguage !== 'english') {
       systemContent += `\n\nIMPORTANT: Respond in ${detectedLanguage} language. Ensure all text is in ${detectedLanguage}, not English.`;
@@ -146,29 +254,35 @@ export async function getCareerAdvice(query: string): Promise<string> {
           content: query,
         },
       ],
-      max_tokens: 600, // Reduced tokens for faster response
-      temperature: 0.5, // More focused responses
+      max_tokens: 800,
+      temperature: 0.7,
+      response_format: { type: "json_object" }
     }).then(response => {
       const content = response.choices[0].message.content;
       if (!content) {
-        // Provide language-specific fallback message
-        if (detectedLanguage === 'hindi') {
-          return "मुझे खेद है, मैं इस समय आपके करियर सलाह अनुरोध को संसाधित नहीं कर सकती। कृपया थोड़ी देर बाद फिर से प्रयास करें।";
-        } else if (detectedLanguage === 'tamil') {
-          return "மன்னிக்கவும், நான் தற்போது உங்கள் தொழில் ஆலோசனை கோரிக்கையை செயலாக்க முடியவில்லை. சிறிது நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.";
-        } else if (detectedLanguage === 'telugu') {
-          return "క్షమించండి, నేను ప్రస్తుతం మీ కెరీర్ సలహా అభ్యర్థనను ప్రాసెస్ చేయలేకపోతున్నాను. దయచేసి కొద్ది సేపటి తర్వాత మళ్లీ ప్రయత్నించండి.";
-        } else if (detectedLanguage === 'kannada') {
-          return "ಕ್ಷಮಿಸಿ, ನಾನು ಈ ಸಮಯದಲ್ಲಿ ನಿಮ್ಮ ವೃತ್ತಿ ಸಲಹೆ ವಿನಂತಿಯನ್ನು ಪ್ರಕ್ರಿಯೆಗೊಳಿಸಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ. ದಯವಿಟ್ಟು ಸ್ವಲ್ಪ ಸಮಯದ ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.";
-        } else if (detectedLanguage === 'bengali') {
-          return "দুঃখিত, আমি এই মুহূর্তে আপনার ক্যারিয়ার পরামর্শ অনুরোধ প্রক্রিয়া করতে পারছি না। দয়া করে কিছুক্ষণ পরে আবার চেষ্টা করুন।";
-        } else {
-          return "I'm sorry, I couldn't process your career advice request at the moment. Please try again shortly.";
-        }
+        return getLanguageSpecificError(detectedLanguage as SupportedLanguage);
       }
-      return content;
+      
+      try {
+        // Parse the JSON response
+        const structured = JSON.parse(content) as StructuredResponse;
+        
+        // Format the response in a user-friendly way
+        return `${structured.understanding}\n\n${structured.keyPoints.join('\n\n')}${
+          structured.statistics.length ? '\n\n📊 Statistics:\n' + 
+          structured.statistics.map((s: { value: string; source: string }) => 
+            `- ${s.value} (${s.source})`).join('\n') : ''
+        }${
+          structured.resources.length ? '\n\n📚 Resources:\n' + 
+          structured.resources.map((r: { text: string; url: string }) => 
+            `- [${r.text}](${r.url})`).join('\n') : ''
+        }\n\n${structured.followUp}`;
+      } catch (e) {
+        console.error('Error parsing structured response:', e);
+        return content; // Fallback to raw content if parsing fails
+      }
     });
-
+    
     // Race between the API call and the timeout
     const response = await Promise.race([apiPromise, timeoutPromise]);
     console.log("Successfully completed career advice with Groq API");
@@ -191,13 +305,53 @@ export async function getMentorshipInfo(query: string): Promise<string> {
       }, 10000);
     });
     
-    // Detect language from the query
-    const detectedLanguage = detectLanguage(query);
+    // Detect language and fetch relevant data in parallel
+    const [detectedLanguage, ragData] = await Promise.all([
+      Promise.resolve(detectLanguage(query)),
+      fetchRelevantData(query)
+    ]);
+    
     console.log(`Detected language for mentorship info: ${detectedLanguage}`);
     
-    // Create language-specific system message
-    let systemContent = "You are Asha AI, a job mentorship specialist for the JobsForHer platform. Format your responses as follows:\n\n1. Be extremely concise and minimalist - use 5-7 key points maximum\n2. Use simple emoji prefixes for each point (no emoji variations)\n3. Bold only the most essential words or phrases\n4. Avoid unnecessary text, headings, or explanations\n5. Focus only on the most practical, actionable mentorship advice\n6. Use simple bullet points with minimal structure\n7. Leave space between points for readability\n8. No introductions or conclusions needed\n9. Use plain language that's immediately actionable\n10. Focus solely on job-related mentorship guidance for women";
-    
+    // Create enhanced system message with RAG data
+    let systemContent = `You are Asha AI, a mentorship specialist for the JobsForHer platform focused on connecting women with career mentors.
+
+CURRENT CONTEXT:
+${ragData.statistics?.map(s => `- ${s.value} (Source: ${s.source})`).join('\n') || 'No current statistics available'}
+
+RELEVANT RESOURCES:
+${ragData.resources?.map(r => `- [${r.text}](${r.url})`).join('\n') || 'No specific resources available'}
+
+RESPONSE FORMAT:
+1. Start with an empathetic understanding of the mentorship needs
+2. Provide specific guidance about mentorship opportunities
+3. Include success statistics from mentor-mentee relationships
+4. Reference specific mentors or mentorship programs
+5. End with clear next steps for connecting with mentors
+
+FORMATTING RULES:
+- Use **bold** for key mentorship areas and roles
+- Include emoji prefixes for better readability
+- Keep advice practical and immediately actionable
+- Cite sources for any statistics or success stories
+- Format URLs as proper markdown links
+
+CONSTRAINTS:
+- Focus on women's professional mentorship
+- Be culturally sensitive and encouraging
+- Emphasize both giving and receiving mentorship
+- Limit to 5-7 main points
+- Include specific JobsForHer mentorship programs
+
+OUTPUT FORMAT:
+{
+  "understanding": "string",
+  "keyPoints": ["string"],
+  "statistics": [{"value": "string", "source": "string"}],
+  "resources": [{"text": "string", "url": "string"}],
+  "followUp": "string"
+}`;
+
     // Add language instruction
     if (detectedLanguage !== 'english') {
       systemContent += `\n\nIMPORTANT: Respond in ${detectedLanguage} language. Ensure all text is in ${detectedLanguage}, not English.`;
@@ -216,29 +370,35 @@ export async function getMentorshipInfo(query: string): Promise<string> {
           content: query,
         },
       ],
-      max_tokens: 600, // Reduced tokens for faster response
-      temperature: 0.5, // More focused responses
+      max_tokens: 800,
+      temperature: 0.7,
+      response_format: { type: "json_object" }
     }).then(response => {
       const content = response.choices[0].message.content;
       if (!content) {
-        // Provide language-specific fallback message
-        if (detectedLanguage === 'hindi') {
-          return "मुझे खेद है, मैं इस समय आपके मेंटरशिप अनुरोध को संसाधित नहीं कर सकती। कृपया थोड़ी देर बाद फिर से प्रयास करें।";
-        } else if (detectedLanguage === 'tamil') {
-          return "மன்னிக்கவும், நான் தற்போது உங்கள் வழிகாட்டல் தகவல் கோரிக்கையை செயலாக்க முடியவில்லை. சிறிது நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.";
-        } else if (detectedLanguage === 'telugu') {
-          return "క్షమించండి, నేను ప్రస్తుతం మీ మెంటర్‌షిప్ సమాచార అభ్యర్థనను ప్రాసెస్ చేయలేకపోతున్నాను. దయచేసి కొద్ది సేపటి తర్వాత మళ్లీ ప్రయత్నించండి.";
-        } else if (detectedLanguage === 'kannada') {
-          return "ಕ್ಷಮಿಸಿ, ನಾನು ಈ ಸಮಯದಲ್ಲಿ ನಿಮ್ಮ ಮಾರ್ಗದರ್ಶನ ಮಾಹಿತಿ ವಿನಂತಿಯನ್ನು ಪ್ರಕ್ರಿಯೆಗೊಳಿಸಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ. ದಯವಿಟ್ಟು ಸ್ವಲ್ಪ ಸಮಯದ ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.";
-        } else if (detectedLanguage === 'bengali') {
-          return "দুঃখিত, আমি এই মুহূর্তে আপনার মেন্টরশিপ তথ্য অনুরোধ প্রক্রিয়া করতে পারছি না। দয়া করে কিছুক্ষণ পরে আবার চেষ্টা করুন।";
-        } else {
-          return "I'm sorry, I couldn't process your mentorship information request at the moment. Please try again shortly.";
-        }
+        return getLanguageSpecificError(detectedLanguage as SupportedLanguage);
       }
-      return content;
+      
+      try {
+        // Parse the JSON response
+        const structured = JSON.parse(content) as StructuredResponse;
+        
+        // Format the response in a user-friendly way
+        return `${structured.understanding}\n\n${structured.keyPoints.join('\n\n')}${
+          structured.statistics.length ? '\n\n📊 Statistics:\n' + 
+          structured.statistics.map((s: { value: string; source: string }) => 
+            `- ${s.value} (${s.source})`).join('\n') : ''
+        }${
+          structured.resources.length ? '\n\n📚 Resources:\n' + 
+          structured.resources.map((r: { text: string; url: string }) => 
+            `- [${r.text}](${r.url})`).join('\n') : ''
+        }\n\n${structured.followUp}`;
+      } catch (e) {
+        console.error('Error parsing structured response:', e);
+        return content; // Fallback to raw content if parsing fails
+      }
     });
-
+    
     // Race between the API call and the timeout
     const response = await Promise.race([apiPromise, timeoutPromise]);
     console.log("Successfully completed mentorship info with Groq API");
@@ -252,8 +412,8 @@ export async function getMentorshipInfo(query: string): Promise<string> {
 
 export interface CareerConfidenceAnalysis {
   confidenceLevel: 'low' | 'medium' | 'high';
-  emotionTone: 'anxious' | 'neutral' | 'confident';
-  supportLevel: 'high-support' | 'moderate-support' | 'minimal-guidance';
+  emotionTone: 'negative' | 'neutral' | 'positive';
+  supportLevel: 'high-support' | 'moderate-support' | 'light-support';
 }
 
 export async function analyzeCareerConfidence(text: string): Promise<CareerConfidenceAnalysis> {
@@ -273,28 +433,49 @@ export async function analyzeCareerConfidence(text: string): Promise<CareerConfi
       messages: [
         {
           role: "system" as const,
-          content: "You are an expert career counselor who specializes in analyzing career confidence levels from text. Your task is to analyze the text and determine the user's career confidence level, emotional tone regarding career, and the level of support they need. Return only a JSON object with these three attributes: confidenceLevel, emotionTone, and supportLevel.",
+          content: `You are an expert career counselor who specializes in analyzing career confidence levels from text. 
+Your task is to assess the input text for:
+1. Career confidence level (low/medium/high)
+2. Emotional tone regarding career (negative/neutral/positive)
+3. Level of support needed (high-support/moderate-support/light-support)
+
+Consider these factors:
+- Use of confident vs hesitant language
+- Presence of career goals and planning
+- Expression of career-related emotions
+- Level of self-advocacy
+- Requests for guidance or validation
+
+OUTPUT FORMAT:
+{
+  "confidenceLevel": "low" | "medium" | "high",
+  "emotionTone": "negative" | "neutral" | "positive",
+  "supportLevel": "high-support" | "moderate-support" | "light-support",
+  "reasoning": {
+    "confidenceAnalysis": "string",
+    "emotionAnalysis": "string",
+    "supportAnalysis": "string"
+  }
+}`,
         },
         {
           role: "user" as const,
-          content: `Analyze this text for career confidence, emotional tone, and required support level: "${text}". Return as JSON with confidenceLevel (low/medium/high), emotionTone (anxious/neutral/confident), and supportLevel (high-support/moderate-support/minimal-guidance).`,
+          content: text,
         },
       ],
-      response_format: { type: "json_object" },
-      max_tokens: 150,
-      temperature: 0.3,
+      max_tokens: 400,
+      temperature: 0.3, // Lower temperature for more consistent analysis
+      response_format: { type: "json_object" }
     }).then(response => {
       const content = response.choices[0].message.content;
       if (!content) {
-        // Default values if no content
-        return {
-          confidenceLevel: 'medium',
-          emotionTone: 'neutral', 
-          supportLevel: 'moderate-support'
-        };
+        throw new Error("No content in response");
       }
+      
       try {
         const result = JSON.parse(content);
+        console.log("Parsed confidence analysis:", result);
+        
         return {
           confidenceLevel: result.confidenceLevel || 'medium',
           emotionTone: result.emotionTone || 'neutral',
