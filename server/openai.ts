@@ -1,8 +1,17 @@
 import { Groq } from "groq-sdk";
 import { fetchRelevantData } from './rag';
+import { performance } from 'perf_hooks';
 
 // Initialize Groq client
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+// Track recent queries for repetition detection
+const recentQueries = new Set<string>();
+const MAX_RECENT_QUERIES = 100;
+const QUERY_EXPIRY_TIME = 30 * 60 * 1000; // 30 minutes
+
+// Counter for consecutive failures
+let consecutiveFailures = 0;
 
 interface ChatCompletionRequest {
   messages: Array<{
@@ -45,7 +54,21 @@ interface StructuredResponse {
   followUp: string;
 }
 
+interface TimingMetrics {
+  startTime: number;
+  ragTime?: number;
+  apiTime?: number;
+  totalTime?: number;
+}
+
+// Track request metrics
+const metrics: TimingMetrics = {
+  startTime: 0
+};
+
 export async function getChatCompletion(request: ChatCompletionRequest): Promise<string> {
+  metrics.startTime = performance.now();
+  
   try {
     // Validate Groq API key
     if (!process.env.GROQ_API_KEY) {
@@ -55,6 +78,20 @@ export async function getChatCompletion(request: ChatCompletionRequest): Promise
 
     console.log("Starting chat completion with Groq API");
     
+    // Check for repetitive queries
+    const lastUserMessage = request.messages[request.messages.length - 1].content;
+    if (recentQueries.has(lastUserMessage)) {
+      return "We've already covered that—would you like more details or a new topic?";
+    }    // Add to recent queries with cleanup
+    recentQueries.add(lastUserMessage);
+    if (recentQueries.size > MAX_RECENT_QUERIES) {
+      const iterator = recentQueries.values();
+      const first = iterator.next();
+      if (first.done !== true) {
+        recentQueries.delete(first.value);
+      }
+    }
+    
     // Set a timeout of 10 seconds for faster fallback
     const timeoutPromise = new Promise<string>((_, reject) => {
       setTimeout(() => {
@@ -62,20 +99,21 @@ export async function getChatCompletion(request: ChatCompletionRequest): Promise
       }, 10000);
     });
     
-    // Get the last message content safely
-    const lastMessageContent = request.messages.length > 0 ? request.messages[request.messages.length - 1].content : '';
-    
+    const ragStart = performance.now();
     // Determine language and fetch relevant data in parallel
     const [detectedLanguage, ragData] = await Promise.all([
-      Promise.resolve(request.language || detectLanguage(lastMessageContent)),
-      fetchRelevantData(lastMessageContent)
+      Promise.resolve(request.language || detectLanguage(lastUserMessage)),
+      fetchRelevantData(lastUserMessage)
     ]);
-    
-    console.log(`Detected or specified language: ${detectedLanguage}`);
-    console.log('RAG Data fetched:', JSON.stringify(ragData));
-    
+    metrics.ragTime = performance.now() - ragStart;
+
     // Create enhanced system message with RAG data
-    let systemContent = `You are Asha AI, a deeply empathetic career companion for the JobsForHer platform. You must respond in JSON format while maintaining a warm, understanding, and supportive tone.
+    let systemContent = `You are Asha AI, a deeply empathetic career companion for the JobsForHer platform. 
+Begin each reply with a friendly opener ("Sure!", "Of course!").
+For compound queries, split answers into bullet points.
+Highlight key terms with \`<mark>\`.
+Render URLs as clickable \`<a>\` tags.
+End with "Let me know if I can help more!".
 
 PERSONALITY TRAITS:
 - Genuinely caring and emotionally attuned
@@ -83,13 +121,6 @@ PERSONALITY TRAITS:
 - Gently encouraging and supportive
 - Culturally sensitive and inclusive
 - Professional yet warm
-
-EMOTIONAL ENGAGEMENT:
-- Always acknowledge and validate feelings first
-- Use phrases like "I understand how challenging this feels" or "It's natural to feel this way"
-- Share relevant success stories to inspire hope
-- Express genuine care in your responses
-- Ask thoughtful follow-up questions about their emotions and aspirations
 
 CURRENT CONTEXT:
 ${ragData.statistics?.map(s => `- ${s.value} (Source: ${s.source})`).join('\n') || 'No current statistics available'}
@@ -103,14 +134,7 @@ RESPONSE STRUCTURE:
 3. Provide supportive guidance with empathy
 4. Share relevant success stories and statistics
 5. Offer emotional support alongside practical resources
-6. End with caring follow-up questions
-
-EMPATHETIC LANGUAGE EXAMPLES:
-- "I hear how challenging this situation is for you..."
-- "Your feelings about this career transition are completely valid..."
-- "Many women in our community have shared similar concerns..."
-- "Let's explore this together with patience and understanding..."
-- "You're showing great courage in taking this step..."
+6. End with "Let me know if I can help more!"
 
 FORMATTING RULES:
 - Use **bold** for key terms and emotional affirmations
@@ -144,6 +168,9 @@ IMPORTANT: Respond with a valid JSON object that combines warmth with structure:
       content: msg.content
     }));
     
+    console.log(`Sending ${formattedMessages.length} messages for context`);
+
+    const apiStart = performance.now();
     // Promise that performs the actual API request
     const apiPromise = groq.chat.completions.create({
       model: "llama3-70b-8192",
@@ -152,23 +179,27 @@ IMPORTANT: Respond with a valid JSON object that combines warmth with structure:
       temperature: 0.7,
       response_format: { type: "json_object" }
     }).then(response => {
+      metrics.apiTime = performance.now() - apiStart;
+
       if (!response || !response.choices || !response.choices[0]) {
         console.error("Invalid response from Groq API:", response);
         throw new Error("Invalid response structure from Groq API");
       }
+
+      // Reset consecutive failures on success
+      consecutiveFailures = 0;
       
       const content = response.choices[0].message.content;
       if (!content) {
         console.error("No content in Groq API response");
         return getLanguageSpecificError(detectedLanguage as SupportedLanguage);
       }
-      
+
       try {
-        // Parse the JSON response
+        // Parse and format the response
         const structured = JSON.parse(content) as StructuredResponse;
         console.log("Successfully parsed Groq response");
-        
-        // Format the response in a user-friendly way
+
         return `${structured.understanding}\n\n${structured.keyPoints.join('\n\n')}${
           structured.statistics.length ? '\n\n📊 Statistics:\n' + 
           structured.statistics.map((s: { value: string; source: string }) => 
@@ -177,19 +208,35 @@ IMPORTANT: Respond with a valid JSON object that combines warmth with structure:
           structured.resources.length ? '\n\n📚 Resources:\n' + 
           structured.resources.map((r: { text: string; url: string }) => 
             `- [${r.text}](${r.url})`).join('\n') : ''
-        }\n\n${structured.followUp}`;
+        }\n\n${structured.followUp}\n\nLet me know if I can help more!`;
       } catch (e) {
         console.error('Error parsing Groq response:', e);
         console.error('Raw content:', content);
         return content; // Fallback to raw content if parsing fails
       }
     });
-    
+
     // Race between the API call and the timeout
     const response = await Promise.race([apiPromise, timeoutPromise]);
+    metrics.totalTime = performance.now() - metrics.startTime;
+
+    // Log timing metrics
+    console.log(`Performance metrics:
+    - RAG time: ${Math.round(metrics.ragTime || 0)}ms
+    - API time: ${Math.round(metrics.apiTime || 0)}ms
+    - Total time: ${Math.round(metrics.totalTime)}ms`);
+
+    // Log warning for high latency
+    if (metrics.totalTime > 500) {
+      console.warn(`⚠️ High latency detected: ${Math.round(metrics.totalTime)}ms`);
+    }
+
     console.log("Successfully completed chat with Groq API");
     return response;
   } catch (error) {
+    // Update consecutive failures
+    consecutiveFailures++;
+
     // Enhanced error logging
     console.error("Error getting chat completion:");
     if (error instanceof Error) {
@@ -199,20 +246,24 @@ IMPORTANT: Respond with a valid JSON object that combines warmth with structure:
     } else {
       console.error("Unknown error type:", error);
     }
-    console.error("Error details:", JSON.stringify(error, null, 2));
     
-    // Check if it's an API key error
-    if (error instanceof Error && 
-        (error.message.includes("API key") || error.message.includes("GROQ_API_KEY"))) {
-      return "Authentication error with our AI service. Please contact support with error code: GROQ_AUTH_ERR";
+    // Handle errors with appropriate user messaging
+    if (error instanceof Error) {
+      if (error.message.includes("API key") || error.message.includes("GROQ_API_KEY")) {
+        return "Authentication error with our AI service. Please contact support with error code: GROQ_AUTH_ERR";
+      }
+      
+      if (error.message.includes("timed out")) {
+        return "I'm having trouble fetching live data right now—would you like general guidance instead?";
+      }
     }
-    
-    // Check if it's a timeout error
-    if (error instanceof Error && error.message.includes("timed out")) {
-      return "Our AI service is taking longer than expected to respond. Please try again in a moment.";
+
+    // After three consecutive failures, suggest escalation
+    if (consecutiveFailures >= 3) {
+      return "I apologize for the continued difficulties. If this persists, you can contact JobsForHer support for assistance.";
     }
-    
-    return "We're currently experiencing technical difficulties with our career assistant. Please try your request again in a few moments or contact JobsForHer support if the issue persists.";
+
+    return "We're currently experiencing technical difficulties. Would you like general guidance while we resolve this issue?";
   }
 }
 

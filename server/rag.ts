@@ -1,17 +1,24 @@
 import { Groq } from "groq-sdk";
 import { fetchLiveData } from './utils/liveFetch';
 import { RAGData } from './types';
+import { measureApiCall } from './utils/diagnostics';
+import { performance } from 'perf_hooks';
 
 interface RAGCache {
   [key: string]: {
     data: RAGData;
     timestamp: number;
+    metrics?: {
+      cacheHits: number;
+      lastAccessed: number;
+    };
   };
 }
 
 // In-memory cache with 1-hour expiry
 const cache: RAGCache = {};
 const CACHE_DURATION = 3600000; // 1 hour in milliseconds
+const MAX_CACHE_ENTRIES = 1000; // Prevent unbounded growth
 
 // Mock data for consistent responses
 const MOCK_DATA: RAGData = {
@@ -61,57 +68,115 @@ const MOCK_DATA: RAGData = {
   ]
 };
 
+function cleanCache(): void {
+  const now = Date.now();
+  Object.keys(cache).forEach(key => {
+    if (now - cache[key].timestamp > CACHE_DURATION) {
+      delete cache[key];
+    }
+  });
+
+  // If still too many entries, remove least recently accessed
+  if (Object.keys(cache).length > MAX_CACHE_ENTRIES) {
+    const entries = Object.entries(cache)
+      .sort(([, a], [, b]) => (b.metrics?.lastAccessed || 0) - (a.metrics?.lastAccessed || 0))
+      .slice(MAX_CACHE_ENTRIES);
+    
+    entries.forEach(([key]) => delete cache[key]);
+  }
+}
+
 export async function fetchRelevantData(query: string): Promise<RAGData> {
+  const startTime = performance.now();
+  
   try {
+    // Clean cache periodically
+    cleanCache();
+    
     // Check cache first
     const cacheKey = query.toLowerCase().trim();
     const cached = cache[cacheKey];
+    
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      console.log("Using cached RAG data");
+      // Update cache metrics
+      cached.metrics = {
+        cacheHits: (cached.metrics?.cacheHits || 0) + 1,
+        lastAccessed: Date.now()
+      };
+      
+      console.log("Using cached RAG data", {
+        cacheHits: cached.metrics.cacheHits,
+        age: Math.round((Date.now() - cached.timestamp) / 1000) + 's'
+      });
+      
       return cached.data;
     }
 
     console.log("Fetching live data...");
     
-    // Try to get live data first
-    let liveData: RAGData;
-    try {
-      liveData = await fetchLiveData(query);
-      console.log("Successfully fetched live data");
-    } catch (error) {
-      console.warn("Live data fetch failed, falling back to mock data", error);
-      liveData = { statistics: [], resources: [] };
+    // Try to get live data first with performance monitoring
+    let liveData: RAGData = await measureApiCall(
+      () => fetchLiveData(query),
+      'Live Data Fetch',
+      'JFH_LIVE_API'
+    );
+
+    console.log("Successfully fetched live data", {
+      statsCount: liveData.statistics.length,
+      resourcesCount: liveData.resources.length,
+      metrics: liveData.metrics
+    });
+
+    // Log latency warning if needed
+    if (liveData.metrics?.requestTime && liveData.metrics.requestTime > 500) {
+      console.warn(`⚠️ High latency in live data fetch: ${Math.round(liveData.metrics.requestTime)}ms`);
     }
 
-    // Filter mock data based on query keywords
+    // Filter mock data based on query keywords for fallback/augmentation
     const keywords = query.toLowerCase().split(/\s+/);
-    const filteredMockData: RAGData = {      statistics: MOCK_DATA.statistics?.filter((stat: { value: string; source: string }) => 
-        keywords.some((keyword) => stat.value.toLowerCase().includes(keyword))
-      ) || MOCK_DATA.statistics?.slice(0, 2),
-      resources: MOCK_DATA.resources?.filter((resource: { text: string; url: string }) => 
-        keywords.some((keyword) => resource.text.toLowerCase().includes(keyword))
-      ) || MOCK_DATA.resources?.slice(0, 2)
+    const filteredMockData: RAGData = {
+      statistics: MOCK_DATA.statistics.filter(stat => 
+        keywords.some(keyword => stat.value.toLowerCase().includes(keyword))
+      ) || MOCK_DATA.statistics.slice(0, 2),
+      resources: MOCK_DATA.resources.filter(resource => 
+        keywords.some(keyword => resource.text.toLowerCase().includes(keyword))
+      ) || MOCK_DATA.resources.slice(0, 2)
     };
 
     // Combine live and mock data, prioritizing live data
     const combinedData: RAGData = {
-      statistics: [...(liveData.statistics || []), ...(filteredMockData.statistics || [])].slice(0, 5),
-      resources: [...(liveData.resources || []), ...(filteredMockData.resources || [])].slice(0, 5)
+      statistics: [...liveData.statistics, ...filteredMockData.statistics].slice(0, 5),
+      resources: [...liveData.resources, ...filteredMockData.resources].slice(0, 5),
+      metrics: {
+        requestTime: performance.now() - startTime,
+        responseSize: JSON.stringify(liveData).length,
+        latencyWarning: (performance.now() - startTime) > 500
+      }
     };
 
     // Update cache
     cache[cacheKey] = {
       data: combinedData,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      metrics: {
+        cacheHits: 0,
+        lastAccessed: Date.now()
+      }
     };
 
     return combinedData;
   } catch (error) {
     console.error('Error in fetchRelevantData:', error);
-    // Return subset of mock data on error
+    
+    // Return subset of mock data on error with metrics
     return {
-      statistics: MOCK_DATA.statistics?.slice(0, 2),
-      resources: MOCK_DATA.resources?.slice(0, 2)
+      statistics: MOCK_DATA.statistics.slice(0, 2),
+      resources: MOCK_DATA.resources.slice(0, 2),
+      metrics: {
+        requestTime: performance.now() - startTime,
+        responseSize: 0,
+        latencyWarning: false
+      }
     };
   }
 }

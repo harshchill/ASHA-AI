@@ -1,12 +1,17 @@
 export interface RAGData {
-  statistics?: Array<{
+  statistics: Array<{
     value: string;
     source: string;
   }>;
-  resources?: Array<{
+  resources: Array<{
     text: string;
     url: string;
   }>;
+  metrics?: {
+    requestTime: number;
+    responseSize: number;
+    latencyWarning?: boolean;
+  };
 }
 
 export interface Message {
