@@ -1,15 +1,6 @@
 import { Groq } from "groq-sdk";
-
-interface RAGData {
-  statistics?: Array<{
-    value: string;
-    source: string;
-  }>;
-  resources?: Array<{
-    text: string;
-    url: string;
-  }>;
-}
+import { fetchLiveData } from './utils/liveFetch';
+import { RAGData } from './types';
 
 interface RAGCache {
   [key: string]: {
@@ -26,30 +17,46 @@ const CACHE_DURATION = 3600000; // 1 hour in milliseconds
 const MOCK_DATA: RAGData = {
   statistics: [
     {
-      value: "73% of women reported career growth after mentorship",
+      value: "92% of women felt more confident in their career decisions after personalized mentorship",
       source: "JobsForHer Impact Report 2025"
     },
     {
-      value: "Over 500,000 women professionals connected on our platform",
-      source: "JobsForHer Platform Statistics 2025"
+      value: "Women supporting women: 78% reported stronger emotional well-being with peer support",
+      source: "JobsForHer Community Survey 2025"
     },
     {
-      value: "85% of mentored professionals reported higher job satisfaction",
-      source: "Women in Tech Survey 2025"
+      value: "3 in 4 women overcame career challenges through supportive networking",
+      source: "Women in Tech Wellness Study 2025"
+    },
+    {
+      value: "89% experienced reduced career anxiety with regular mentor guidance",
+      source: "Professional Women's Mental Health Report 2025"
+    },
+    {
+      value: "Work-life harmony achievement increased by 65% with proper support systems",
+      source: "JobsForHer Balance Index 2025"
     }
   ],
   resources: [
     {
-      text: "JobsForHer Mentorship Program",
-      url: "https://www.jobsforher.com/mentorship"
+      text: "Emotional Intelligence in Leadership - Free Workshop",
+      url: "https://www.jobsforher.com/workshops/ei-leadership"
     },
     {
-      text: "Career Development Resources",
-      url: "https://www.jobsforher.com/resources"
+      text: "Women's Support Circle - Weekly Virtual Meetups",
+      url: "https://www.jobsforher.com/community/support-circle"
     },
     {
-      text: "Professional Skills Workshops",
-      url: "https://www.jobsforher.com/workshops"
+      text: "Career Transition Support Program",
+      url: "https://www.jobsforher.com/transition-support"
+    },
+    {
+      text: "Work-Life Balance Counseling Sessions",
+      url: "https://www.jobsforher.com/counseling"
+    },
+    {
+      text: "Mindful Career Planning Resources",
+      url: "https://www.jobsforher.com/mindful-planning"
     }
   ]
 };
@@ -64,26 +71,41 @@ export async function fetchRelevantData(query: string): Promise<RAGData> {
       return cached.data;
     }
 
-    console.log("Using mock RAG data");
+    console.log("Fetching live data...");
     
+    // Try to get live data first
+    let liveData: RAGData;
+    try {
+      liveData = await fetchLiveData(query);
+      console.log("Successfully fetched live data");
+    } catch (error) {
+      console.warn("Live data fetch failed, falling back to mock data", error);
+      liveData = { statistics: [], resources: [] };
+    }
+
     // Filter mock data based on query keywords
     const keywords = query.toLowerCase().split(/\s+/);
-    const filteredData: RAGData = {
-      statistics: MOCK_DATA.statistics?.filter(s => 
-        keywords.some(k => s.value.toLowerCase().includes(k))
+    const filteredMockData: RAGData = {      statistics: MOCK_DATA.statistics?.filter((stat: { value: string; source: string }) => 
+        keywords.some((keyword) => stat.value.toLowerCase().includes(keyword))
       ) || MOCK_DATA.statistics?.slice(0, 2),
-      resources: MOCK_DATA.resources?.filter(r => 
-        keywords.some(k => r.text.toLowerCase().includes(k))
+      resources: MOCK_DATA.resources?.filter((resource: { text: string; url: string }) => 
+        keywords.some((keyword) => resource.text.toLowerCase().includes(keyword))
       ) || MOCK_DATA.resources?.slice(0, 2)
+    };
+
+    // Combine live and mock data, prioritizing live data
+    const combinedData: RAGData = {
+      statistics: [...(liveData.statistics || []), ...(filteredMockData.statistics || [])].slice(0, 5),
+      resources: [...(liveData.resources || []), ...(filteredMockData.resources || [])].slice(0, 5)
     };
 
     // Update cache
     cache[cacheKey] = {
-      data: filteredData,
+      data: combinedData,
       timestamp: Date.now()
     };
 
-    return filteredData;
+    return combinedData;
   } catch (error) {
     console.error('Error in fetchRelevantData:', error);
     // Return subset of mock data on error
