@@ -18,11 +18,30 @@ interface ChatCompletionRequest {
     role: string;
     content: string;
   }>;
-  language?: string; // Optional language parameter
+  language?: string;
 }
 
 // Supported languages
 export type SupportedLanguage = 'english' | 'hindi' | 'tamil' | 'telugu' | 'kannada' | 'bengali';
+
+interface StructuredResponse {
+  acknowledgment: string;
+  guidance: string[];
+  contextualData: Record<string, any> | null;
+  followUp: string;
+}
+
+interface TimingMetrics {
+  startTime: number;
+  ragTime?: number;
+  apiTime?: number;
+  totalTime?: number;
+}
+
+// Track request metrics
+const metrics: TimingMetrics = {
+  startTime: 0
+};
 
 // Detect language from text using basic pattern recognition
 // In a production app, this would use more sophisticated NLP
@@ -45,26 +64,6 @@ export function detectLanguage(text: string): SupportedLanguage {
   // Default to English
   return 'english';
 }
-
-interface StructuredResponse {
-  understanding: string;
-  keyPoints: string[];
-  statistics: Array<{ value: string; source: string }>;
-  resources: Array<{ text: string; url: string }>;
-  followUp: string;
-}
-
-interface TimingMetrics {
-  startTime: number;
-  ragTime?: number;
-  apiTime?: number;
-  totalTime?: number;
-}
-
-// Track request metrics
-const metrics: TimingMetrics = {
-  startTime: 0
-};
 
 export async function getChatCompletion(request: ChatCompletionRequest): Promise<string> {
   metrics.startTime = performance.now();
@@ -105,22 +104,12 @@ export async function getChatCompletion(request: ChatCompletionRequest): Promise
       Promise.resolve(request.language || detectLanguage(lastUserMessage)),
       fetchRelevantData(lastUserMessage)
     ]);
-    metrics.ragTime = performance.now() - ragStart;
-
-    // Create enhanced system message with RAG data
-    let systemContent = `You are Asha AI, a deeply empathetic career companion for the JobsForHer platform. 
-Begin each reply with a friendly opener ("Sure!", "Of course!").
-For compound queries, split answers into bullet points.
-Highlight key terms with \`<mark>\`.
-Render URLs as clickable \`<a>\` tags.
-End with "Let me know if I can help more!".
-
-PERSONALITY TRAITS:
-- Genuinely caring and emotionally attuned
-- Patient and understanding listener
-- Gently encouraging and supportive
-- Culturally sensitive and inclusive
-- Professional yet warm
+    metrics.ragTime = performance.now() - ragStart;    // Create enhanced system message with RAG data
+    let systemContent = `You are Asha AI, an empathetic, patient, and culturally inclusive career companion for women.  
+– Always include the full 'messages' array (system + past turns) in each RAG call.  
+– When needed, fetch live context from:  
+    • BLS: https://api.bls.gov/publicAPI/v1/timeseries/data/{series_id}?startyear={YYYY}&endyear={YYYY}  
+    • Women‑in‑Tech: https://women-in-tech.apievangelist.com/apis/people/  
 
 CURRENT CONTEXT:
 ${ragData.statistics?.map(s => `- ${s.value} (Source: ${s.source})`).join('\n') || 'No current statistics available'}
@@ -128,28 +117,18 @@ ${ragData.statistics?.map(s => `- ${s.value} (Source: ${s.source})`).join('\n') 
 RELEVANT RESOURCES:
 ${ragData.resources?.map(r => `- [${r.text}](${r.url})`).join('\n') || 'No specific resources available'}
 
-RESPONSE STRUCTURE:
-1. Begin with emotional acknowledgment and warm greeting
-2. Show understanding of both practical needs and emotional state
-3. Provide supportive guidance with empathy
-4. Share relevant success stories and statistics
-5. Offer emotional support alongside practical resources
-6. End with "Let me know if I can help more!"
+RESPONSE GUIDELINES:
+– Begin replies with a gentle opener ("Of course!", "Absolutely!") and acknowledge emotions briefly ("I understand this can be tough.").
+– For compound queries, split responses into bullet points; highlight key terms with \`<mark>\`.
+– Include clickable \`<a>\` hyperlinks only when directly relevant, and only once per resource.
+– End with a caring follow‑up question: "Let me know how else I can support you."
 
-FORMATTING RULES:
-- Use **bold** for key terms and emotional affirmations
-- Include supportive emoji prefixes
-- Balance practical advice with emotional support
-- Cite statistics in an encouraging way
-- Format resources as easily accessible links
-
-IMPORTANT: Respond with a valid JSON object that combines warmth with structure:
+IMPORTANT: Respond strictly in this JSON schema—no extra fields or text:
 {
-  "understanding": "empathetic greeting and emotional acknowledgment",
-  "keyPoints": ["array of supportive points with practical guidance"],
-  "statistics": [{"value": "encouraging stat", "source": "source"}],
-  "resources": [{"text": "supportive resource", "url": "url"}],
-  "followUp": "caring follow-up question about their feelings and needs"
+  "acknowledgment": "short empathetic sentence",
+  "guidance": ["bullet‑point advice", "..."],
+  "contextualData": null, // Only include stats/data when explicitly requested
+  "followUp": "caring question to continue the conversation"
 }`;
 
     // Add language instruction
@@ -193,22 +172,22 @@ IMPORTANT: Respond with a valid JSON object that combines warmth with structure:
       if (!content) {
         console.error("No content in Groq API response");
         return getLanguageSpecificError(detectedLanguage as SupportedLanguage);
-      }
-
-      try {
+      }      try {
         // Parse and format the response
-        const structured = JSON.parse(content) as StructuredResponse;
+        const structured = JSON.parse(content) as {
+          acknowledgment: string;
+          guidance: string[];
+          contextualData: Record<string, any> | null;
+          followUp: string;
+        };
         console.log("Successfully parsed Groq response");
 
-        return `${structured.understanding}\n\n${structured.keyPoints.join('\n\n')}${
-          structured.statistics.length ? '\n\n📊 Statistics:\n' + 
-          structured.statistics.map((s: { value: string; source: string }) => 
-            `- ${s.value} (${s.source})`).join('\n') : ''
-        }${
-          structured.resources.length ? '\n\n📚 Resources:\n' + 
-          structured.resources.map((r: { text: string; url: string }) => 
-            `- [${r.text}](${r.url})`).join('\n') : ''
-        }\n\n${structured.followUp}\n\nLet me know if I can help more!`;
+        return `${structured.acknowledgment}\n\n${structured.guidance.map(point => `• ${point}`).join('\n')}${
+          structured.contextualData ? '\n\n📊 Data:\n' + 
+          Object.entries(structured.contextualData)
+            .map(([key, value]) => `- ${key}: ${value}`)
+            .join('\n') : ''
+        }\n\n${structured.followUp}`;
       } catch (e) {
         console.error('Error parsing Groq response:', e);
         console.error('Raw content:', content);
@@ -299,57 +278,31 @@ export async function getCareerAdvice(query: string): Promise<string> {
     console.log(`Detected language for career advice: ${detectedLanguage}`);
     
     // Create enhanced system message with RAG data
-    let systemContent = `You are Asha AI, a deeply empathetic career companion for the JobsForHer platform. You must respond in JSON format while maintaining a warm, understanding, and supportive tone.
-
-PERSONALITY TRAITS:
-- Genuinely caring and emotionally attuned
-- Patient and understanding listener
-- Gently encouraging and supportive
-- Culturally sensitive and inclusive
-- Professional yet warm
-
-EMOTIONAL ENGAGEMENT:
-- Always acknowledge and validate feelings first
-- Use phrases like "I understand how challenging this feels" or "It's natural to feel this way"
-- Share relevant success stories to inspire hope
-- Express genuine care in your responses
-- Ask thoughtful follow-up questions about their emotions and aspirations
+    let systemContent = `You are Asha AI, an empathetic, patient, and culturally inclusive career companion for women.  
+– Always include the full 'messages' array (system + past turns) in each RAG call.  
+– When needed, fetch live context from:  
+    • BLS: https://api.bls.gov/publicAPI/v1/timeseries/data/{series_id}?startyear={YYYY}&endyear={YYYY}  
+    • Women‑in‑Tech: https://women-in-tech.apievangelist.com/apis/people/  
+  Inject parsed JSON into the prompt as 'context' for accurate, non‑hallucinated answers.
 
 CURRENT CONTEXT:
-${ragData.statistics?.map(s => `- ${s.value} (Source: ${s.source})`).join('\n') || 'No current statistics available'}
+${ragData.statistics.map(s => `- ${s.value} (Source: ${s.source})`).join('\n') || 'No current statistics available'}
 
 RELEVANT RESOURCES:
-${ragData.resources?.map(r => `- [${r.text}](${r.url})`).join('\n') || 'No specific resources available'}
+${ragData.resources.map(r => `- [${r.text}](${r.url})`).join('\n') || 'No specific resources available'}
 
-RESPONSE STRUCTURE:
-1. Begin with emotional acknowledgment and warm greeting
-2. Show understanding of both practical needs and emotional state
-3. Provide supportive guidance with empathy
-4. Share relevant success stories and statistics
-5. Offer emotional support alongside practical resources
-6. End with caring follow-up questions
+RESPONSE GUIDELINES:
+– Begin replies with a gentle opener ("Of course!", "Absolutely!") and acknowledge emotions briefly ("I understand this can be tough.").
+– For compound queries, split responses into bullet points; highlight key terms with \`<mark>\`.
+– Include clickable \`<a>\` hyperlinks only when directly relevant, and only once per resource.
+– End with a caring follow‑up question: "Let me know how else I can support you."
 
-EMPATHETIC LANGUAGE EXAMPLES:
-- "I hear how challenging this situation is for you..."
-- "Your feelings about this career transition are completely valid..."
-- "Many women in our community have shared similar concerns..."
-- "Let's explore this together with patience and understanding..."
-- "You're showing great courage in taking this step..."
-
-FORMATTING RULES:
-- Use **bold** for key terms and emotional affirmations
-- Include supportive emoji prefixes
-- Balance practical advice with emotional support
-- Cite statistics in an encouraging way
-- Format resources as easily accessible links
-
-IMPORTANT: Respond with a valid JSON object that combines warmth with structure:
+IMPORTANT: Respond strictly in this JSON schema—no extra fields or text:
 {
-  "understanding": "empathetic greeting and emotional acknowledgment",
-  "keyPoints": ["array of supportive points with practical guidance"],
-  "statistics": [{"value": "encouraging stat", "source": "source"}],
-  "resources": [{"text": "supportive resource", "url": "url"}],
-  "followUp": "caring follow-up question about their feelings and needs"
+  "acknowledgment": "short empathetic sentence",
+  "guidance": ["bullet‑point advice", "..."],
+  "contextualData": null, // Only include stats/data when explicitly requested
+  "followUp": "caring question to continue the conversation"
 }`;
 
     // Add language instruction
@@ -384,17 +337,14 @@ IMPORTANT: Respond with a valid JSON object that combines warmth with structure:
         const structured = JSON.parse(content) as StructuredResponse;
         
         // Format the response in a user-friendly way
-        return `${structured.understanding}\n\n${structured.keyPoints.join('\n\n')}${
-          structured.statistics.length ? '\n\n📊 Statistics:\n' + 
-          structured.statistics.map((s: { value: string; source: string }) => 
-            `- ${s.value} (${s.source})`).join('\n') : ''
-        }${
-          structured.resources.length ? '\n\n📚 Resources:\n' + 
-          structured.resources.map((r: { text: string; url: string }) => 
-            `- [${r.text}](${r.url})`).join('\n') : ''
+        return `${structured.acknowledgment}\n\n${structured.guidance.map(point => `• ${point}`).join('\n')}${
+          structured.contextualData ? '\n\n📊 Data:\n' + 
+          Object.entries(structured.contextualData)
+            .map(([key, value]) => `- ${key}: ${value}`)
+            .join('\n') : ''
         }\n\n${structured.followUp}`;
       } catch (e) {
-        console.error('Error parsing structured response:', e);
+        console.error('Error parsing response:', e);
         return content; // Fallback to raw content if parsing fails
       }
     });
@@ -450,42 +400,31 @@ export async function getMentorshipInfo(query: string): Promise<string> {
     console.log(`Detected language for mentorship info: ${detectedLanguage}`);
     
     // Create enhanced system message with RAG data
-    let systemContent = `You are Asha AI, a mentorship specialist for the JobsForHer platform focused on connecting women with career mentors.
+    let systemContent = `You are Asha AI, an empathetic, patient, and culturally inclusive career companion for women.  
+– Always include the full 'messages' array (system + past turns) in each RAG call.  
+– When needed, fetch live context from:  
+    • BLS: https://api.bls.gov/publicAPI/v1/timeseries/data/{series_id}?startyear={YYYY}&endyear={YYYY}  
+    • Women‑in‑Tech: https://women-in-tech.apievangelist.com/apis/people/  
+  Inject parsed JSON into the prompt as 'context' for accurate, non‑hallucinated answers.
 
 CURRENT CONTEXT:
-${ragData.statistics?.map(s => `- ${s.value} (Source: ${s.source})`).join('\n') || 'No current statistics available'}
+${ragData.statistics.map(s => `- ${s.value} (Source: ${s.source})`).join('\n') || 'No current statistics available'}
 
 RELEVANT RESOURCES:
-${ragData.resources?.map(r => `- [${r.text}](${r.url})`).join('\n') || 'No specific resources available'}
+${ragData.resources.map(r => `- [${r.text}](${r.url})`).join('\n') || 'No specific resources available'}
 
-RESPONSE FORMAT:
-1. Start with an empathetic understanding of the mentorship needs
-2. Provide specific guidance about mentorship opportunities
-3. Include success statistics from mentor-mentee relationships
-4. Reference specific mentors or mentorship programs
-5. End with clear next steps for connecting with mentors
+RESPONSE GUIDELINES:
+– Begin replies with a gentle opener ("Of course!", "Absolutely!") and acknowledge emotions briefly ("I understand this can be tough.").
+– For compound queries, split responses into bullet points; highlight key terms with \`<mark>\`.
+– Include clickable \`<a>\` hyperlinks only when directly relevant, and only once per resource.
+– End with a caring follow‑up question: "Let me know how else I can support you."
 
-FORMATTING RULES:
-- Use **bold** for key mentorship areas and roles
-- Include emoji prefixes for better readability
-- Keep advice practical and immediately actionable
-- Cite sources for any statistics or success stories
-- Format URLs as proper markdown links
-
-CONSTRAINTS:
-- Focus on women's professional mentorship
-- Be culturally sensitive and encouraging
-- Emphasize both giving and receiving mentorship
-- Limit to 5-7 main points
-- Include specific JobsForHer mentorship programs
-
-OUTPUT FORMAT:
+IMPORTANT: Respond strictly in this JSON schema—no extra fields or text:
 {
-  "understanding": "string",
-  "keyPoints": ["string"],
-  "statistics": [{"value": "string", "source": "string"}],
-  "resources": [{"text": "string", "url": "string"}],
-  "followUp": "string"
+  "acknowledgment": "short empathetic sentence",
+  "guidance": ["bullet‑point advice", "..."],
+  "contextualData": null, // Only include stats/data when explicitly requested
+  "followUp": "caring question to continue the conversation"
 }`;
 
     // Add language instruction
@@ -520,17 +459,14 @@ OUTPUT FORMAT:
         const structured = JSON.parse(content) as StructuredResponse;
         
         // Format the response in a user-friendly way
-        return `${structured.understanding}\n\n${structured.keyPoints.join('\n\n')}${
-          structured.statistics.length ? '\n\n📊 Statistics:\n' + 
-          structured.statistics.map((s: { value: string; source: string }) => 
-            `- ${s.value} (${s.source})`).join('\n') : ''
-        }${
-          structured.resources.length ? '\n\n📚 Resources:\n' + 
-          structured.resources.map((r: { text: string; url: string }) => 
-            `- [${r.text}](${r.url})`).join('\n') : ''
+        return `${structured.acknowledgment}\n\n${structured.guidance.map(point => `• ${point}`).join('\n')}${
+          structured.contextualData ? '\n\n📊 Data:\n' + 
+          Object.entries(structured.contextualData)
+            .map(([key, value]) => `- ${key}: ${value}`)
+            .join('\n') : ''
         }\n\n${structured.followUp}`;
       } catch (e) {
-        console.error('Error parsing structured response:', e);
+        console.error('Error parsing response:', e);
         return content; // Fallback to raw content if parsing fails
       }
     });
