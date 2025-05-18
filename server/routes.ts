@@ -1,18 +1,11 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { 
-  getChatCompletion, 
-  getCareerAdvice, 
-  getMentorshipInfo, 
-  analyzeCareerConfidence,
-  detectLanguage,
-  type CareerConfidenceAnalysis,
-  type SupportedLanguage
-} from "./openai";
+import { analyzeCareerConfidence, type CareerConfidenceAnalysis } from "./openai";
 import { insertMessageSchema } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
+import { generateResponse } from './services/prompt-service';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API endpoint to get chat messages
@@ -50,71 +43,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sessionMessages = await storage.getMessages(userMessage.sessionId);
       console.log(`Retrieved ${sessionMessages.length} messages for context`);
       
-      // Format messages for LLM API
-      const formattedMessages = sessionMessages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
-
-      // Get AI response
-      let aiResponse: string;
-      console.log("Determining response type based on content");
-      
-      // Detect language from user message
-      const detectedLanguage = detectLanguage(userMessage.content);
-      console.log(`Detected language from user message: ${detectedLanguage}`);
-      
-      const lowerCaseContent = userMessage.content.toLowerCase();
-      
-      // Expanded job-related keywords for better matching
-      if (lowerCaseContent.includes('job') || 
-          lowerCaseContent.includes('career') || 
-          lowerCaseContent.includes('work') ||
-          lowerCaseContent.includes('employment') ||
-          lowerCaseContent.includes('salary') ||
-          lowerCaseContent.includes('pay') ||
-          lowerCaseContent.includes('interview') ||
-          lowerCaseContent.includes('resume') ||
-          lowerCaseContent.includes('cv') ||
-          lowerCaseContent.includes('application') ||
-          lowerCaseContent.includes('apply') ||
-          lowerCaseContent.includes('position') ||
-          lowerCaseContent.includes('opportunity') ||
-          lowerCaseContent.includes('skill') ||
-          lowerCaseContent.includes('procedure') ||
-          lowerCaseContent.includes('experience') ||
-          lowerCaseContent.includes('qualification') ||
-          lowerCaseContent.includes('hire') ||
-          lowerCaseContent.includes('employer') ||
-          lowerCaseContent.includes('tech') ||
-          lowerCaseContent.includes('industry')) {
-        console.log("Processing as career advice request");
-        aiResponse = await getCareerAdvice(userMessage.content);
-      } 
-      // Expanded mentorship-related keywords
-      else if (lowerCaseContent.includes('mentor') || 
-               lowerCaseContent.includes('mentorship') ||
-               lowerCaseContent.includes('guidance') ||
-               lowerCaseContent.includes('coach') ||
-               lowerCaseContent.includes('advisor') ||
-               lowerCaseContent.includes('support') ||
-               lowerCaseContent.includes('help') ||
-               lowerCaseContent.includes('network') ||
-               lowerCaseContent.includes('connection') ||
-               lowerCaseContent.includes('grow') ||
-               lowerCaseContent.includes('advice') ||
-               lowerCaseContent.includes('learn')) {
-        console.log("Processing as mentorship request");
-        aiResponse = await getMentorshipInfo(userMessage.content);
-      } 
-      // Default to general chat completion with career focus
-      else {
-        console.log("Processing as general chat request with career focus");
-        aiResponse = await getChatCompletion({ 
-          messages: formattedMessages,
-          language: detectedLanguage
-        });
-      }
+      // Generate AI response using centralized prompt service
+      const aiResponse = await generateResponse(
+        userMessage.content,
+        sessionMessages.map(msg => ({
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content
+        }))
+      );
 
       console.log("Successfully received AI response");
       
