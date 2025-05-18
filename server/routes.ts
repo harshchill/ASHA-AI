@@ -3,13 +3,10 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
   getChatCompletion, 
-  getCareerAdvice, 
-  getMentorshipInfo, 
   analyzeCareerConfidence,
-  detectLanguage,
-  type CareerConfidenceAnalysis,
-  type SupportedLanguage
+  type CareerConfidenceAnalysis
 } from "./openai";
+import { detectLanguage, type SupportedLanguage } from "./utils/language";
 import { insertMessageSchema } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
