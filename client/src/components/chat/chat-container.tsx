@@ -3,7 +3,7 @@ import ChatMessage from "./chat-message";
 import WelcomeMessage from "./welcome-message";
 import { useToast } from "@/hooks/use-toast";
 import useTextToSpeech from "@/hooks/use-text-to-speech";
-
+import { useCareerConfidence } from "@/contexts/CareerConfidenceContext";
 import { Message } from "@/types";
 
 interface ChatContainerProps {
@@ -17,6 +17,7 @@ const ChatContainer = ({ messages, isLoading, isTtsEnabled, onSendMessage }: Cha
   const containerRef = useRef<HTMLDivElement>(null);
   const { speak } = useTextToSpeech();
   const { toast } = useToast();
+  const { confidenceState, updateEmotionalState } = useCareerConfidence();
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -35,6 +36,44 @@ const ChatContainer = ({ messages, isLoading, isTtsEnabled, onSendMessage }: Cha
   //   }
   // }, [messages, isTtsEnabled, speak]);
 
+  // Analyze emotional context of messages
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.role === "user") {
+        // Simple emotional analysis based on keywords
+        const text = lastMessage.content.toLowerCase();
+        const emotionalKeywords = ['feel', 'worried', 'anxious', 'stressed', 'overwhelmed', 'confused'];
+        const practicalKeywords = ['how to', 'steps', 'process', 'guide', 'example', 'explain'];
+        const motivationalKeywords = ['goal', 'achieve', 'improve', 'success', 'growth', 'better'];
+
+        const emotionalScore = emotionalKeywords.filter(word => text.includes(word)).length;
+        const practicalScore = practicalKeywords.filter(word => text.includes(word)).length;
+        const motivationalScore = motivationalKeywords.filter(word => text.includes(word)).length;
+
+        let tone = 'practical';
+        let emphasis = 'balanced';
+
+        if (emotionalScore > practicalScore && emotionalScore > motivationalScore) {
+          tone = 'supportive';
+          emphasis = 'emotional';
+        } else if (practicalScore > emotionalScore && practicalScore > motivationalScore) {
+          tone = 'practical';
+          emphasis = 'factual';
+        } else if (motivationalScore > emotionalScore && motivationalScore > practicalScore) {
+          tone = 'motivational';
+          emphasis = 'balanced';
+        }
+
+        updateEmotionalState({
+          tone: tone as 'supportive' | 'practical' | 'motivational',
+          emphasis: emphasis as 'emotional' | 'factual' | 'balanced',
+          lastAnalysis: new Date()
+        });
+      }
+    }
+  }, [messages, updateEmotionalState]);
+
   const handleSpeakMessage = (text: string) => {
     speak(text);
     toast({
@@ -47,7 +86,11 @@ const ChatContainer = ({ messages, isLoading, isTtsEnabled, onSendMessage }: Cha
   return (
     <div 
       ref={containerRef} 
-      className="chat-container overflow-y-auto custom-scrollbar px-4 py-3 flex flex-col gap-4 h-[calc(100vh-160px)] md:h-[calc(100vh-160px)]"
+      className={`chat-container overflow-y-auto custom-scrollbar px-4 py-3 flex flex-col gap-4 h-[calc(100vh-160px)] md:h-[calc(100vh-160px)] ${
+        confidenceState.emotionalState.tone === 'supportive' ? 'bg-purple-50/30' :
+        confidenceState.emotionalState.tone === 'motivational' ? 'bg-blue-50/30' :
+        'bg-white'
+      }`}
       style={{
         scrollBehavior: "smooth"
       }}

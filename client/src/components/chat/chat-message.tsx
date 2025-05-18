@@ -20,11 +20,34 @@ interface ChatMessageProps {
   onSpeakMessage: (text: string) => void;
 }
 
+interface StructuredResponse {
+  acknowledgment: string;
+  guidance: string[];
+  contextualData: Record<string, any> | null;
+  followUp: string;
+  style: {
+    tone: 'supportive' | 'practical' | 'motivational';
+    emoji: string;
+    emphasis: 'emotional' | 'factual' | 'balanced';
+  };
+  resources: {
+    relevance: number;
+    suggestions: Array<{
+      text: string;
+      url: string;
+      emoji: string;
+      category: string;
+      context: string;
+    }>;
+  };
+}
+
 const ChatMessage = ({ message, onSpeakMessage }: ChatMessageProps) => {
   const isUser = message.role === "user";
   const [formattedContent, setFormattedContent] = useState<string>(message.content);
   const [keyPoints, setKeyPoints] = useState<string[]>([]);
   const [showKeyPoints, setShowKeyPoints] = useState<boolean>(false);
+  const [structuredResponse, setStructuredResponse] = useState<StructuredResponse | null>(null);
   const { confidenceState } = useCareerConfidence();
   
   // Get the color scheme and supportive text based on confidence level
@@ -123,6 +146,77 @@ const ChatMessage = ({ message, onSpeakMessage }: ChatMessageProps) => {
       setKeyPoints(extractKeyPoints(message.content));
     } else {
       setFormattedContent(message.content);
+    }
+  }, [message.content, isUser]);
+
+  // Process message content to parse structured responses
+  useEffect(() => {
+    if (!isUser) {
+      try {
+        const parsedResponse = JSON.parse(message.content) as StructuredResponse;
+        setStructuredResponse(parsedResponse);
+        
+        // Format the content with styling
+        let formattedText = `<div class="space-y-4">
+          <div class="text-${parsedResponse.style.tone} font-medium">
+            ${parsedResponse.style.emoji} ${parsedResponse.acknowledgment}
+          </div>
+          <div class="space-y-2">
+            ${parsedResponse.guidance.map(point => `
+              <div class="flex items-start gap-2 text-${parsedResponse.style.emphasis}">
+                <span class="text-accent">•</span>
+                <span>${point}</span>
+              </div>
+            `).join('')}
+          </div>
+          ${parsedResponse.contextualData ? `
+            <div class="mt-4 p-4 bg-muted rounded-lg">
+              <h4 class="font-semibold mb-2">📊 Relevant Data</h4>
+              ${Object.entries(parsedResponse.contextualData).map(([key, value]) => `
+                <div class="flex items-center gap-2">
+                  <span class="font-medium">${key}:</span>
+                  <span>${value}</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+          ${parsedResponse.resources.suggestions.length > 0 ? `
+            <div class="mt-4">
+              <h4 class="font-semibold mb-2">🔍 Helpful Resources</h4>
+              ${parsedResponse.resources.suggestions.map(resource => `
+                <a href="${resource.url}" 
+                   class="flex items-center gap-2 p-2 hover:bg-accent/10 rounded-lg text-accent hover:underline"
+                   target="_blank" 
+                   rel="noopener noreferrer">
+                  <span>${resource.emoji}</span>
+                  <span>${resource.text}</span>
+                </a>
+              `).join('')}
+            </div>
+          ` : ''}
+          <div class="mt-4 text-muted-foreground">
+            ${parsedResponse.followUp}
+          </div>
+        </div>`;
+        
+        setFormattedContent(formattedText);
+        setKeyPoints(extractKeyPoints(message.content));
+      } catch (e) {
+        // If parsing fails, fall back to the existing formatting logic
+        let content = message.content;
+        
+        // Highlight bold text (already in markdown format)
+        content = content.replace(/\*\*(.*?)\*\*/g, '<span class="font-bold text-[#6A2C91]">$1</span>');
+        
+        // Highlight numbered points (1., 2., etc.)
+        content = content.replace(/(\d+\.\s+)([^\n]+)/g, '$1<span class="font-semibold text-[#6A2C91]">$2</span>');
+        
+        // Highlight bullet points
+        content = content.replace(/(\*\s+)([^\n]+)/g, '$1<span class="font-semibold">$2</span>');
+        
+        setFormattedContent(content);
+        setKeyPoints(extractKeyPoints(content));
+      }
     }
   }, [message.content, isUser]);
 

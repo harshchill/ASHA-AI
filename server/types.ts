@@ -1,16 +1,39 @@
+interface ResourceMetrics {
+  relevance: number;
+  emotionalContext?: 'supportive' | 'practical' | 'motivational';
+  usageCount: number;
+  lastUsed?: number;
+}
+
+export interface Resource {
+  text: string;
+  url: string;
+  emoji?: string;
+  category?: 'course' | 'community' | 'tool' | 'career' | 'mentorship';
+  level?: 'beginner' | 'intermediate' | 'advanced';
+  metrics?: ResourceMetrics;
+}
+
+export interface Statistic {
+  value: string;
+  source: string;
+  emoji?: string;
+  category?: 'success' | 'trend' | 'impact' | 'learning';
+  metrics?: ResourceMetrics;
+}
+
 export interface RAGData {
-  statistics: Array<{
-    value: string;
-    source: string;
-  }>;
-  resources: Array<{
-    text: string;
-    url: string;
-  }>;
+  statistics: Statistic[];
+  resources: Resource[];
   metrics?: {
     requestTime: number;
     responseSize: number;
     latencyWarning?: boolean;
+    relevanceMetrics?: {
+      topResourceScore: number;
+      contextMatch: number;
+      emotionalAlignment: number;
+    };
   };
 }
 

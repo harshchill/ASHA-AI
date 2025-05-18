@@ -3,23 +3,39 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 export type ConfidenceLevel = 'low' | 'medium' | 'high';
 export type EmotionTone = 'anxious' | 'neutral' | 'confident';
 export type SupportLevel = 'high-support' | 'moderate-support' | 'minimal-guidance';
+export type ResponseTone = 'supportive' | 'practical' | 'motivational';
+export type ResponseEmphasis = 'emotional' | 'factual' | 'balanced';
+
+export interface EmotionalState {
+  tone: ResponseTone;
+  emphasis: ResponseEmphasis;
+  lastAnalysis: Date;
+}
 
 export interface CareerConfidenceState {
   confidenceLevel: ConfidenceLevel;
   emotionTone: EmotionTone;
   supportLevel: SupportLevel;
+  emotionalState: EmotionalState;
 }
 
 interface CareerConfidenceContextType {
   confidenceState: CareerConfidenceState;
   updateConfidence: (analysis: CareerConfidenceState) => void;
+  updateEmotionalState: (state: EmotionalState) => void;
+  getResponseStyle: () => { tone: ResponseTone; emphasis: ResponseEmphasis };
 }
 
 // Default state - neutral/moderate values
 const defaultConfidenceState: CareerConfidenceState = {
   confidenceLevel: 'medium',
   emotionTone: 'neutral',
-  supportLevel: 'moderate-support'
+  supportLevel: 'moderate-support',
+  emotionalState: {
+    tone: 'practical',
+    emphasis: 'balanced',
+    lastAnalysis: new Date()
+  }
 };
 
 // Create the context
@@ -33,8 +49,49 @@ export const CareerConfidenceProvider = ({ children }: { children: ReactNode }) 
     setConfidenceState(analysis);
   };
 
+  const updateEmotionalState = (state: EmotionalState) => {
+    setConfidenceState(prev => ({
+      ...prev,
+      emotionalState: {
+        ...state,
+        lastAnalysis: new Date()
+      }
+    }));
+  };
+
+  const getResponseStyle = (): { tone: ResponseTone; emphasis: ResponseEmphasis } => {
+    const { confidenceLevel, emotionTone, supportLevel, emotionalState } = confidenceState;
+
+    // Define response style based on current state
+    let tone: ResponseTone = emotionalState.tone;
+    let emphasis: ResponseEmphasis = emotionalState.emphasis;
+
+    // Adjust tone based on confidence and emotion
+    if (confidenceLevel === 'low' || emotionTone === 'anxious') {
+      tone = 'supportive';
+      emphasis = 'emotional';
+    } else if (confidenceLevel === 'high' && emotionTone === 'confident') {
+      tone = 'motivational';
+      emphasis = 'balanced';
+    }
+
+    // Adjust emphasis based on support level
+    if (supportLevel === 'high-support') {
+      emphasis = 'emotional';
+    } else if (supportLevel === 'minimal-guidance') {
+      emphasis = 'factual';
+    }
+
+    return { tone, emphasis };
+  };
+
   return (
-    <CareerConfidenceContext.Provider value={{ confidenceState, updateConfidence }}>
+    <CareerConfidenceContext.Provider value={{ 
+      confidenceState, 
+      updateConfidence, 
+      updateEmotionalState,
+      getResponseStyle 
+    }}>
       {children}
     </CareerConfidenceContext.Provider>
   );

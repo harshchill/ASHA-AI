@@ -1,6 +1,7 @@
 import { Groq } from "groq-sdk";
 import { fetchRelevantData } from './rag';
 import { performance } from 'perf_hooks';
+import { Resource, Statistic } from './types';
 
 // Initialize Groq client
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -29,44 +30,61 @@ interface StructuredResponse {
   guidance: string[];
   contextualData: Record<string, any> | null;
   followUp: string;
+  style: {
+    tone: 'supportive' | 'practical' | 'motivational';
+    emoji: string;
+    emphasis: 'emotional' | 'factual' | 'balanced';
+  };
+  resources: {
+    relevance: number;
+    suggestions: Array<{
+      text: string;
+      url: string;
+      emoji: string;
+      category: string;
+      context: string;
+    }>;
+  };
 }
 
-interface TimingMetrics {
-  startTime: number;
-  ragTime?: number;
-  apiTime?: number;
-  totalTime?: number;
-}
+// Add function to analyze emotional context
+function analyzeEmotionalContext(message: string): {
+  tone: 'supportive' | 'practical' | 'motivational';
+  emphasis: 'emotional' | 'factual' | 'balanced';
+} {
+  const emotionalKeywords = ['feel', 'worried', 'anxious', 'stressed', 'overwhelmed', 'confused'];
+  const practicalKeywords = ['how to', 'steps', 'process', 'guide', 'example', 'explain'];
+  const motivationalKeywords = ['goal', 'achieve', 'improve', 'success', 'growth', 'better'];
 
-// Track request metrics
-const metrics: TimingMetrics = {
-  startTime: 0
-};
+  const lowercaseMessage = message.toLowerCase();
+  
+  const emotionalScore = emotionalKeywords.filter(word => lowercaseMessage.includes(word)).length;
+  const practicalScore = practicalKeywords.filter(word => lowercaseMessage.includes(word)).length;
+  const motivationalScore = motivationalKeywords.filter(word => lowercaseMessage.includes(word)).length;
 
-// Detect language from text using basic pattern recognition
-// In a production app, this would use more sophisticated NLP
-export function detectLanguage(text: string): SupportedLanguage {
-  // Check for Hindi characters (Devanagari)
-  if (/[\u0900-\u097F]/.test(text)) return 'hindi';
-  
-  // Check for Tamil characters
-  if (/[\u0B80-\u0BFF]/.test(text)) return 'tamil';
-  
-  // Check for Telugu characters
-  if (/[\u0C00-\u0C7F]/.test(text)) return 'telugu';
-  
-  // Check for Kannada characters
-  if (/[\u0C80-\u0CFF]/.test(text)) return 'kannada';
-  
-  // Check for Bengali characters
-  if (/[\u0980-\u09FF]/.test(text)) return 'bengali';
-  
-  // Default to English
-  return 'english';
+  let tone: 'supportive' | 'practical' | 'motivational';
+  if (emotionalScore > practicalScore && emotionalScore > motivationalScore) {
+    tone = 'supportive';
+  } else if (practicalScore > emotionalScore && practicalScore > motivationalScore) {
+    tone = 'practical';
+  } else {
+    tone = 'motivational';
+  }
+
+  let emphasis: 'emotional' | 'factual' | 'balanced';
+  if (emotionalScore > (practicalScore + motivationalScore) * 1.5) {
+    emphasis = 'emotional';
+  } else if ((practicalScore + motivationalScore) > emotionalScore * 1.5) {
+    emphasis = 'factual';
+  } else {
+    emphasis = 'balanced';
+  }
+
+  return { tone, emphasis };
 }
 
 export async function getChatCompletion(request: ChatCompletionRequest): Promise<string> {
-  metrics.startTime = performance.now();
+  metrics.startRequest();
   
   try {
     // Validate Groq API key
@@ -75,14 +93,17 @@ export async function getChatCompletion(request: ChatCompletionRequest): Promise
       throw new Error("GROQ_API_KEY is required");
     }
 
-    console.log("Starting chat completion with Groq API");
+    // Get the user's message and analyze emotional context
+    const userMessage = request.messages[request.messages.length - 1].content;
+    const emotionalContext = analyzeEmotionalContext(userMessage);
     
     // Check for repetitive queries
-    const lastUserMessage = request.messages[request.messages.length - 1].content;
-    if (recentQueries.has(lastUserMessage)) {
+    if (recentQueries.has(userMessage)) {
       return "We've already covered that—would you like more details or a new topic?";
-    }    // Add to recent queries with cleanup
-    recentQueries.add(lastUserMessage);
+    }
+    
+    // Add to recent queries with cleanup
+    recentQueries.add(userMessage);
     if (recentQueries.size > MAX_RECENT_QUERIES) {
       const iterator = recentQueries.values();
       const first = iterator.next();
@@ -104,7 +125,7 @@ export async function getChatCompletion(request: ChatCompletionRequest): Promise
       Promise.resolve(request.language || detectLanguage(lastUserMessage)),
       fetchRelevantData(lastUserMessage)
     ]);
-    metrics.ragTime = performance.now() - ragStart;    // Create enhanced system message with RAG data
+    metrics.setRagTime(performance.now() - ragStart);    // Create enhanced system message with RAG data
     let systemContent = `You are Asha AI, an empathetic, patient, and culturally inclusive career companion for women.  
 – Always include the full 'messages' array (system + past turns) in each RAG call.  
 – When needed, fetch live context from:  
@@ -158,7 +179,7 @@ IMPORTANT: Respond strictly in this JSON schema—no extra fields or text:
       temperature: 0.7,
       response_format: { type: "json_object" }
     }).then(response => {
-      metrics.apiTime = performance.now() - apiStart;
+      metrics.setApiTime(performance.now() - apiStart);
 
       if (!response || !response.choices || !response.choices[0]) {
         console.error("Invalid response from Groq API:", response);
@@ -197,7 +218,7 @@ IMPORTANT: Respond strictly in this JSON schema—no extra fields or text:
 
     // Race between the API call and the timeout
     const response = await Promise.race([apiPromise, timeoutPromise]);
-    metrics.totalTime = performance.now() - metrics.startTime;
+    metrics.setTotalTime(performance.now() - metrics.getMetrics().startTime);
 
     // Log timing metrics
     console.log(`Performance metrics:
@@ -612,3 +633,64 @@ IMPORTANT: Respond with a valid JSON object that captures emotional nuance:
     };
   }
 }
+
+// Language detection
+function detectLanguage(text: string): SupportedLanguage {
+  // Check for Hindi characters (Devanagari)
+  if (/[\u0900-\u097F]/.test(text)) return 'hindi';
+  
+  // Check for Tamil characters
+  if (/[\u0B80-\u0BFF]/.test(text)) return 'tamil';
+  
+  // Check for Telugu characters
+  if (/[\u0C00-\u0C7F]/.test(text)) return 'telugu';
+  
+  // Check for Kannada characters
+  if (/[\u0C80-\u0CFF]/.test(text)) return 'kannada';
+  
+  // Check for Bengali characters
+  if (/[\u0980-\u09FF]/.test(text)) return 'bengali';
+  
+  // Default to English
+  return 'english';
+}
+
+// Request metrics tracking
+class RequestMetrics {
+  private _startTime: number = 0;
+  private _ragTime?: number;
+  private _apiTime?: number;
+  private _totalTime?: number;
+
+  startRequest() {
+    this._startTime = performance.now();
+  }
+
+  setRagTime(time: number) {
+    this._ragTime = time;
+  }
+
+  setApiTime(time: number) {
+    this._apiTime = time;
+  }
+
+  setTotalTime(time: number) {
+    this._totalTime = time;
+  }
+
+  get startTime() {
+    return this._startTime;
+  }
+
+  getMetrics() {
+    return {
+      startTime: this._startTime,
+      ragTime: this._ragTime,
+      apiTime: this._apiTime,
+      totalTime: this._totalTime
+    };
+  }
+}
+
+// Track metrics for each request
+const metrics = new RequestMetrics();

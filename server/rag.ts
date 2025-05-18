@@ -25,45 +25,94 @@ const MOCK_DATA: RAGData = {
   statistics: [
     {
       value: "92% of women felt more confident in their career decisions after personalized mentorship",
-      source: "JobsForHer Impact Report 2025"
+      source: "JobsForHer Impact Report 2025",
+      emoji: "⭐",
+      category: "success"
     },
     {
       value: "Women supporting women: 78% reported stronger emotional well-being with peer support",
-      source: "JobsForHer Community Survey 2025"
+      source: "JobsForHer Community Survey 2025",
+      emoji: "💪",
+      category: "impact"
     },
     {
       value: "3 in 4 women overcame career challenges through supportive networking",
-      source: "Women in Tech Wellness Study 2025"
+      source: "Women in Tech Wellness Study 2025",
+      emoji: "🤝",
+      category: "success"
     },
     {
       value: "89% experienced reduced career anxiety with regular mentor guidance",
-      source: "Professional Women's Mental Health Report 2025"
+      source: "Professional Women's Mental Health Report 2025",
+      emoji: "🎯",
+      category: "impact"
     },
     {
       value: "Work-life harmony achievement increased by 65% with proper support systems",
-      source: "JobsForHer Balance Index 2025"
+      source: "JobsForHer Balance Index 2025",
+      emoji: "⚖️",
+      category: "trend"
     }
-  ],
-  resources: [
+  ],  resources: [
     {
       text: "Emotional Intelligence in Leadership - Free Workshop",
-      url: "https://www.jobsforher.com/workshops/ei-leadership"
+      url: "https://www.jobsforher.com/workshops/ei-leadership",
+      emoji: "🧠",
+      category: "career",
+      level: "intermediate",
+      metrics: {
+        relevance: 0.95,
+        emotionalContext: "practical",
+        usageCount: 0
+      }
     },
     {
       text: "Women's Support Circle - Weekly Virtual Meetups",
-      url: "https://www.jobsforher.com/community/support-circle"
+      url: "https://www.jobsforher.com/community/support-circle",
+      emoji: "👥",
+      category: "community",
+      level: "beginner",
+      metrics: {
+        relevance: 0.9,
+        emotionalContext: "supportive",
+        usageCount: 0
+      }
     },
     {
       text: "Career Transition Support Program",
-      url: "https://www.jobsforher.com/transition-support"
+      url: "https://www.jobsforher.com/transition-support",
+      emoji: "🔄",
+      category: "career",
+      level: "intermediate",
+      metrics: {
+        relevance: 0.85,
+        emotionalContext: "practical",
+        usageCount: 0
+      }
     },
     {
       text: "Work-Life Balance Counseling Sessions",
-      url: "https://www.jobsforher.com/counseling"
+      url: "https://www.jobsforher.com/counseling",
+      emoji: "⚖️",
+      category: "mentorship",
+      level: "beginner",
+      metrics: {
+        relevance: 0.8,
+        emotionalContext: "supportive",
+        usageCount: 0
+      }
     },
     {
       text: "Mindful Career Planning Resources",
-      url: "https://www.jobsforher.com/mindful-planning"
+      url: "https://www.jobsforher.com/mindful-planning",
+      emoji: "🎯",
+      category: "tool",
+      level: "advanced",
+      metrics: {
+        relevance: 0.75,
+        emotionalContext: "motivational",
+        usageCount: 0
+      }
     }
   ]
 };
