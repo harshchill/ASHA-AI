@@ -6,6 +6,7 @@ import { insertMessageSchema } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { generateResponse } from './services/prompt-service';
+import axios from 'axios';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API endpoint to get chat messages
@@ -17,6 +18,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching messages:", error);
       res.status(500).json({ message: "Error fetching messages" });
+    }
+  });
+
+  // Google Search API endpoint
+  app.get("/api/search", async (req: Request, res: Response) => {
+    try {
+      const query = req.query.q as string;
+      if (!query) {
+        return res.status(400).json({ message: "Query parameter 'q' is required" });
+      }
+
+      const response = await axios.get('https://www.googleapis.com/customsearch/v1', {
+        params: {
+          key: process.env.GOOGLE_API_KEY,
+          cx: process.env.GOOGLE_CX,
+          q: query,
+          num: 5
+        }
+      });
+
+      const results = response.data.items?.map((item: any) => ({
+        title: item.title,
+        snippet: item.snippet,
+        link: item.link
+      })) || [];
+
+      res.json(results);
+    } catch (error) {
+      console.error("Error fetching search results:", error);
+      res.status(500).json({ message: "Error fetching search results" });
     }
   });
 
@@ -43,13 +74,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sessionMessages = await storage.getMessages(userMessage.sessionId);
       console.log(`Retrieved ${sessionMessages.length} messages for context`);
       
+      // Fetch relevant search results
+      let searchResults = [];
+      try {
+        const searchResponse = await axios.get(`/api/search?q=${encodeURIComponent(userMessage.content)}`);
+        searchResults = searchResponse.data;
+      } catch (error) {
+        console.error("Error fetching search results:", error);
+      }
+      
       // Generate AI response using centralized prompt service
       const aiResponse = await generateResponse(
         userMessage.content,
         sessionMessages.map(msg => ({
           role: msg.role as 'user' | 'assistant',
           content: msg.content
-        }))
+        })),
+        searchResults
       );
 
       console.log("Successfully received AI response");
@@ -61,7 +102,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sessionId: userMessage.sessionId
       });
 
-      console.log("Stored assistant message in database");
+      // Update session history
+      if (!req.session.history) {
+        req.session.history = [];
+      }
+      req.session.history.push({
+        user: userMessage.content,
+        bot: aiResponse
+      });
+      // Keep only last 5 turns
+      if (req.session.history.length > 5) {
+        req.session.history.shift();
+      }
 
       // Analyze the career confidence level from the user message
       console.log("Analyzing career confidence from user message");

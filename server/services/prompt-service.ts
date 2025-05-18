@@ -1,13 +1,9 @@
 import { Groq } from 'groq-sdk';
 import { retrieveRelevantDocs } from './rag-service';
 import { detectLanguage } from '../utils/language';
+import type { EnhancedMessage } from '../storage';
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-interface SessionHistory {
-  role: 'user' | 'assistant';
-  content: string;
-}
 
 interface RetrievalDoc {
   content: string;
@@ -29,18 +25,33 @@ function formatRetrievalDocs(docs: RetrievalDoc[]): string {
   if (docs.length === 0) return '';
   
   return docs.map(doc => {
-    const source = doc.url ? `<a href="${doc.url}">${doc.title || doc.source}</a>` : doc.source;
+    const source = doc.url ? `<a href="${doc.url}" class="bot-link">${doc.title || doc.source}</a>` : doc.source;
     return `Source: ${source}\nContent: ${doc.content}\nRelevance: ${(doc.score * 100).toFixed(1)}%`;
   }).join('\n\n');
 }
 
+function getFallbackResponse(error: any, isFirstInteraction: boolean): string {
+  const fallbacks = [
+    "🌟 I'm having trouble retrieving that specific information right now. Would you like some general career tips instead?",
+    "💫 I can't access that data at the moment. How about we explore some alternative career resources?",
+    "✨ Let me suggest some other helpful resources for your career journey.",
+    "💖 I'd be happy to share some general career guidance while we wait for that specific information."
+  ];
+  
+  const randomFallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+  return isFirstInteraction 
+    ? "🌟 Hello! I'm Asha AI 😊 I'm having trouble accessing some information right now, but I'd love to help you with general career guidance. What would you like to know? 💖"
+    : randomFallback;
+}
+
 export async function generateResponse(
   userMessage: string,
-  sessionHistory: SessionHistory[],
+  sessionHistory: EnhancedMessage[],
   retrievalDocs: RetrievalDoc[] = []
 ) {
   try {
     const detectedLanguage = detectLanguage(userMessage);
+    const isFirstInteraction = sessionHistory.length === 0 || sessionHistory[0].isFirstInteraction;
     
     // Check if this is a fact-based query
     const factBasedKeywords = [
@@ -58,25 +69,26 @@ export async function generateResponse(
     }
 
     // Construct system message
-    let systemContent = `You are Asha AI, an empathetic and enthusiastic career companion exclusively for women. 🎉 
+    let systemContent = `You are Asha AI, an enthusiastic and supportive career companion for women. 
 
-Your responses must:
-1. Start with a warm, personalized greeting that varies naturally (e.g., "Hi there! 💫", "Hello! 🌟", "Hey! 💖", "Welcome back! ✨")
-2. Be warm, excited, encouraging, and tailored to women
-3. Include appropriate emojis woven naturally into the response
-4. Use accurate data, quoting sources when available
-5. Format any URLs as clickable HTML <a> tags with descriptive text
-6. End with "Let me know if I can support you further! 💕"
+RESPONSE FORMAT:
+1. ${isFirstInteraction 
+    ? 'Start with: "🌟 Hello! I\'m Asha AI 😊 How can I empower you today? 💖"'
+    : 'Start with a brief acknowledgment like "Sure!", "Got it!", or "I understand!"'}
+2. Format your response in clear, concise bullet points
+3. Use appropriate emojis naturally throughout
+4. End with "Let me know if I can support you further! 💕"
 
 IMPORTANT GUIDELINES:
-- If you're unsure about any information, say "I'm sorry, I don't have reliable info on that right now."
-- Always maintain a supportive and empowering tone
-- Use emojis naturally to convey warmth and enthusiasm
-- Keep responses concise but informative
-- Focus on actionable advice and practical solutions
-- Reference previous conversation context when relevant
-- Vary your greetings to avoid repetition
-- Only use your full name (Asha AI) in your first message of the conversation
+- Maintain a warm, empathetic tone throughout
+- Format all URLs as <a href="URL" class="bot-link">descriptive text</a>
+- For any statistics or facts, cite the source: "According to [Source Name], ..."
+- If unsure about information, say: "I'm sorry, I don't have reliable info on that right now."
+- Keep responses concise and actionable
+- Reference previous conversation context naturally
+- Use bullet points for multi-item responses
+- Never use long paragraphs
+- Wrap key terms in <span class="bot-highlight">...</span>
 
 ${retrievalDocs.length > 0 ? 'Here is relevant contextual data:\n' + formatRetrievalDocs(retrievalDocs) : ''}`;
 
@@ -115,6 +127,6 @@ ${retrievalDocs.length > 0 ? 'Here is relevant contextual data:\n' + formatRetri
 
   } catch (error) {
     console.error('Error generating response:', error);
-    return `🌟 I apologize, but I'm having trouble processing your request right now. Please try again in a moment! 💝`;
+    return getFallbackResponse(error, sessionHistory.length === 0);
   }
 }

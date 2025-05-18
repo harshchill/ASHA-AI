@@ -1,0 +1,19 @@
+.bot-link {
+  color: #1a73e8;
+  background: rgba(26, 115, 232, 0.1);
+  padding: 2px 4px;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.bot-link:hover {
+  background: rgba(26, 115, 232, 0.2);
+}
+
+.bot-highlight {
+  background: #fff8c4;
+  color: #665c00;
+  padding: 1px 3px;
+  border-radius: 3px;
+} 
