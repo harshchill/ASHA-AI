@@ -2,7 +2,6 @@ services:
   - type: web
     name: chatbot-backend
     env: node
-    buildCommand: npm install
     startCommand: npm start
     envVars:
       - key: NODE_ENV
