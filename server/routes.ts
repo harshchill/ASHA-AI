@@ -6,6 +6,8 @@ import { insertMessageSchema } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { generateResponse } from './services/prompt-service';
+import { chatHandler } from './controllers/chatController.js';
+import { retryMiddleware } from './middleware/retryMiddleware.js';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API endpoint to get chat messages
@@ -108,6 +110,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error clearing messages" });
     }
   });
+
+  // Add POST /chat route with retry middleware
+  app.post('/chat', retryMiddleware(chatHandler));
 
   const httpServer = createServer(app);
   return httpServer;
