@@ -77,9 +77,9 @@ const ChatMessage = ({ message, onSpeakMessage }: ChatMessageProps) => {
     if (!isUser) {
       let content = message.content;
       
-      // Format link tags with our custom bot-link class
+      // Format link tags with our custom bot-link class and improved styling
       content = content.replace(/<a href="(.*?)".*?>(.*?)<\/a>/g, 
-        '<a href="$1" class="bot-link" target="_blank" rel="noopener noreferrer">$2</a>'
+        '<a href="$1" class="bot-link inline-block px-2 py-0.5 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors duration-200" target="_blank" rel="noopener noreferrer">$2</a>'
       );
       
       // Format JSON blocks with syntax highlighting
@@ -104,14 +104,14 @@ const ChatMessage = ({ message, onSpeakMessage }: ChatMessageProps) => {
       // Convert markdown bold to highlighted spans
       content = content.replace(/\*\*(.*?)\*\*/g, '<span class="bot-highlight">$1</span>');
       
-      // Process emoji prefixed lines with improved styling
+      // Process bullet points and emoji-prefixed lines with improved styling
       content = content.split('\n').map(line => {
-        // Match any emoji at start (surrogate pair)
-        if (line.match(/^[\uD800-\uDBFF][\uDC00-\uDFFF]/) && !line.includes('class="')) {
-          const firstChar = line.charAt(0) + (line.charAt(1) || '');
-          const restOfLine = line.slice(2).trim();
-          return `<div class="flex items-start gap-3 my-2.5 group">
-            <span class="text-xl leading-6 opacity-90 transition-transform duration-200 group-hover:scale-110">${firstChar}</span>
+        const trimmedLine = line.trim();
+        // Only match lines starting with "•" bullet point
+        if (trimmedLine.startsWith('•')) {
+          const restOfLine = trimmedLine.slice(1).trim();
+          return `<div class="flex items-start gap-3 my-2.5 -ml-1 group first:mt-0">
+            <span class="text-xl leading-6 opacity-90 transition-transform duration-200 group-hover:scale-110 min-w-[1.5rem] text-center">•</span>
             <span class="flex-1 leading-relaxed">${restOfLine}</span>
           </div>`;
         }
