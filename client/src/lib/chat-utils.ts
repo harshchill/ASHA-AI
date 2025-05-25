@@ -4,21 +4,34 @@ interface FormattedSection {
   emoji?: string;
   title?: string;
   items: string[];
-  isHerKey?: boolean;
+  isPriority?: boolean;
+  isListFormat?: boolean;
   source?: {
     url: string;
     text: string;
   };
 }
 
-function detectHerKeyContent(text: string): boolean {
-  const herKeyTerms = [
-    'herkey foundation',
-    'jobsforher foundation',
-    'herkeyfoundation.org',
-    'jfhfoundation'
+function detectPriorityContent(text: string): boolean {
+  return text.toLowerCase().includes('jobsforherfoundation.org') || text.includes('★');
+}
+
+function detectListContent(text: string): boolean {
+  const listIndicators = [
+    'list of',
+    'steps to',
+    'guide to',
+    'how to',
+    'tips for',
+    'ways to',
+    'strategies',
+    'tips',
+    'recommendations',
+    'guidelines'
   ];
-  return herKeyTerms.some(term => text.toLowerCase().includes(term));
+  return listIndicators.some(indicator => 
+    text.toLowerCase().includes(indicator)
+  );
 }
 
 function formatSourceLink(url: string, text: string): string {
@@ -44,12 +57,13 @@ export function formatMessageContent(content: string): {
   const keyPoints: string[] = [];
 
   for (const line of lines) {
-    // Check for HerKey content first
-    if (detectHerKeyContent(line)) {
+    // Check for priority content first (HerKey)
+    if (detectPriorityContent(line)) {
       sections.unshift({
         emoji: SECTION_EMOJIS.herkey,
         items: [line.trim()],
-        isHerKey: true
+        isPriority: true,
+        isListFormat: detectListContent(line)
       });
       keyPoints.push(line.trim());
       continue;
@@ -89,10 +103,11 @@ export function formatMessageContent(content: string): {
   if (currentSection.items.length > 0) {
     sections.push(currentSection);
   }
-
   // Format all sections as HTML
   const formattedSections = sections.map(section => {
-    const sectionClass = section.isHerKey ? 'herkey-section' : 'chat-section';
+    const sectionClass = section.isPriority ? 'herkey-section' : 'chat-section';
+    const formatClass = section.isListFormat ? 'list-format' : 'paragraph-format';
+    
     const titleHtml = section.title 
       ? `<div class="section-title font-medium mb-2">
            ${section.emoji || ''} ${section.title}
@@ -101,7 +116,7 @@ export function formatMessageContent(content: string): {
     
     const itemsHtml = section.items.map(item => 
       `<li class="mb-2 leading-relaxed">
-        ${section.isHerKey ? formatSourceLink('https://jobsforherfoundation.org', item) : item}
+        ${section.isPriority ? formatSourceLink('https://jobsforherfoundation.org', item) : item}
        </li>`
     ).join('');
 
