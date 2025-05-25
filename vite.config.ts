@@ -19,12 +19,5 @@ export default defineConfig({
   build: {
     outDir: resolve(__dirname, 'dist/public'),
     emptyOutDir: true,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-        },
-      },
-    },
   },
 })
