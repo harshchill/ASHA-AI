@@ -44,11 +44,15 @@ function getFallbackResponse(error: any, isFirstInteraction: boolean): string {
     : randomFallback;
 }
 
+import { getHerKeyContext } from './herkey-rag';
+
 export async function generateResponse(
   userMessage: string,
   sessionHistory: EnhancedMessage[],
   retrievalDocs: RetrievalDoc[] = []
 ) {
+  // Get relevant context from HerKey
+  const herKeyContext = await getHerKeyContext(userMessage);
   try {
     const detectedLanguage = detectLanguage(userMessage);
     const isFirstInteraction = sessionHistory.length === 0 || sessionHistory[0].isFirstInteraction;
@@ -68,8 +72,18 @@ export async function generateResponse(
       retrievalDocs = await retrieveRelevantDocs(userMessage);
     }
 
-    // Construct system message
-    let systemContent = `You are Asha AI, an enthusiastic and supportive career companion for women. 
+    // Construct system message    // Format HerKey context
+    const herKeyInfo = herKeyContext.map(ctx => {
+      if (ctx.type === 'job') {
+        return `Job Opportunity: ${ctx.title}\nDetails: ${ctx.content}\nApply at: ${ctx.url}`;
+      }
+      return `Resource: ${ctx.title}\nContent: ${ctx.content}\nRead more: ${ctx.url}`;
+    }).join('\n\n');
+
+    let systemContent = `You are Asha AI, an enthusiastic and supportive career companion for women, powered by HerKey (formerly JobsForHer). 
+
+RELEVANT HERKEY INFORMATION:
+${herKeyInfo}
 
 RESPONSE FORMAT:
 1. ${isFirstInteraction 
