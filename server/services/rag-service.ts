@@ -18,21 +18,27 @@ interface JobSource {
   priority: number;
 }
 
+interface CareerContent {
+  type: 'job' | 'course' | 'article';
+  title: string;
+  company?: string;
+  location?: string;
+  description: string;
+  url: string;
+  postedDate?: string;
+  salary?: string;
+  actions: {
+    type: 'apply' | 'enroll' | 'read' | 'save';
+    label: string;
+    url: string;
+  }[];
+  source: string;
+  skills?: string[];
+  requirements?: string[];
+}
+
 const jobSources: JobSource[] = [
-  // Primary sources (HerKey ecosystem)
-  {
-    url: 'https://jobsforher.com/jobs',
-    type: 'web',
-    name: 'JobsForHer',
-    priority: 1
-  },
-  {
-    url: 'https://womenreturners.com/jobs',
-    type: 'web',
-    name: 'WomenReturners',
-    priority: 1
-  },
-  // Secondary sources (Major job portals)
+  // Career Portals
   {
     url: 'https://www.linkedin.com/jobs/search',
     type: 'web',
@@ -57,50 +63,48 @@ const jobSources: JobSource[] = [
     name: 'Glassdoor',
     priority: 2
   },
-  // Research and data sources
+  // Learning Platforms
   {
-    url: 'https://www.anitab.org/resources/research/',
+    url: 'https://www.coursera.org/courses',
     type: 'web',
-    name: 'AnitaB.org',
-    priority: 3
+    name: 'Coursera',
+    priority: 2
   },
   {
-    url: 'https://www.catalyst.org/research/women-in-tech/',
+    url: 'https://www.udacity.com/courses/all',
     type: 'web',
-    name: 'Catalyst',
-    priority: 3
+    name: 'Udacity',
+    priority: 2
+  },
+  // Career Resources
+  {
+    url: 'https://www.anitab.org/resources/',
+    type: 'web',
+    name: 'AnitaB.org',
+    priority: 2
   }
 ];
-
-interface ScrapedJob {
-  title: string;
-  company?: string;
-  location?: string;
-  description: string;
-  url: string;
-  postedDate?: string;
-}
 
 async function fetchFromWebpage(url: string, query: string): Promise<RetrievalDoc[]> {
   try {
     let fullUrl = url;
     if (!url.includes(query)) {
-      // Add search parameters based on the job site
+      const searchParam = encodeURIComponent(query);
       if (url.includes('linkedin.com')) {
-        fullUrl = `${url}?keywords=${encodeURIComponent(query)}`;
+        fullUrl = `${url}?keywords=${searchParam}`;
       } else if (url.includes('indeed.com')) {
-        fullUrl = `${url}?q=${encodeURIComponent(query)}`;
+        fullUrl = `${url}?q=${searchParam}`;
       } else if (url.includes('naukri.com')) {
-        fullUrl = `${url}/search/${encodeURIComponent(query)}-jobs`;
-      } else if (url.includes('glassdoor')) {
-        fullUrl = `${url}?q=${encodeURIComponent(query)}`;
+        fullUrl = `${url}/search/${searchParam}-jobs`;
+      } else if (url.includes('coursera.org')) {
+        fullUrl = `${url}?query=${searchParam}`;
       }
     }
 
     const response = await axios.get(fullUrl, {
       timeout: 10000,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/91.0.4472.124',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5',
         'Referer': 'https://www.google.com/'
@@ -108,58 +112,120 @@ async function fetchFromWebpage(url: string, query: string): Promise<RetrievalDo
     });
     
     const $ = cheerio.load(response.data);
-    const jobs: ScrapedJob[] = [];
+    const careerContent: CareerContent[] = [];
     
-    // Generic job listing selectors
-    const jobCards = $('div[class*="job-"], div[class*="card"], .job-listing, article');
-    
-    jobCards.each((_, element) => {
+    // Job Listings
+    $('div[class*="job-"], div[class*="card"], .job-listing, article').each((_, element) => {
       const el = $(element);
       const title = el.find('h2, h3, [class*="title"]').first().text().trim();
       const company = el.find('[class*="company"], [class*="employer"]').first().text().trim();
       const location = el.find('[class*="location"]').first().text().trim();
       const description = el.find('[class*="description"], [class*="snippet"]').first().text().trim();
+      const salary = el.find('[class*="salary"], [class*="compensation"]').first().text().trim();
       const jobUrl = el.find('a').first().attr('href');
       const postedDate = el.find('[class*="date"], time').first().text().trim();
       
       if (title && (description || company)) {
-        jobs.push({
+        const content: CareerContent = {
+          type: 'job',
           title,
           company,
           location,
           description: description || `${title} - ${company} - ${location}`,
           url: jobUrl ? new URL(jobUrl, fullUrl).href : fullUrl,
-          postedDate
-        });
+          postedDate,
+          salary,
+          source: url.includes('linkedin.com') ? 'LinkedIn' : 
+                 url.includes('naukri.com') ? 'Naukri' :
+                 url.includes('indeed.com') ? 'Indeed' :
+                 url.includes('glassdoor') ? 'Glassdoor' : 'Other',
+          actions: [
+            {
+              type: 'apply',
+              label: 'Apply Now',
+              url: jobUrl ? new URL(jobUrl, fullUrl).href : fullUrl
+            },
+            {
+              type: 'save',
+              label: 'Save Job',
+              url: jobUrl ? new URL(jobUrl, fullUrl).href : fullUrl
+            }
+          ]
+        };
+        careerContent.push(content);
       }
     });
     
-    // If no jobs found, try extracting general content
-    if (jobs.length === 0) {
+    // Courses
+    if (url.includes('coursera.org') || url.includes('udacity.com')) {
+      $('div[class*="course-"], div[class*="card"]').each((_, element) => {
+        const el = $(element);
+        const title = el.find('h2, h3, [class*="title"]').first().text().trim();
+        const description = el.find('[class*="description"]').first().text().trim();
+        const courseUrl = el.find('a').first().attr('href');
+        
+        if (title && description) {
+          careerContent.push({
+            type: 'course',
+            title,
+            description,
+            url: courseUrl ? new URL(courseUrl, fullUrl).href : fullUrl,
+            source: url.includes('coursera.org') ? 'Coursera' : 'Udacity',
+            actions: [
+              {
+                type: 'enroll',
+                label: 'Enroll Now',
+                url: courseUrl ? new URL(courseUrl, fullUrl).href : fullUrl
+              },
+              {
+                type: 'save',
+                label: 'Save Course',
+                url: courseUrl ? new URL(courseUrl, fullUrl).href : fullUrl
+              }
+            ]
+          });
+        }
+      });
+    }
+
+    // Articles and Resources
+    if (careerContent.length === 0) {
       const content = $('article, .content, .main, #main, .post-content')
         .text()
         .replace(/\s+/g, ' ')
         .trim();
         
       if (content) {
-        jobs.push({
+        careerContent.push({
+          type: 'article',
           title: $('title').text() || $('h1').first().text(),
           description: content,
-          url: fullUrl
+          url: fullUrl,
+          source: url.includes('anitab.org') ? 'AnitaB.org' : 'Other',
+          actions: [
+            {
+              type: 'read',
+              label: 'Read More',
+              url: fullUrl
+            }
+          ]
         });
       }
     }
 
-    // Convert scraped jobs to RetrievalDoc format
-    return jobs.map(job => ({
-      content: `${job.title}\n${job.company ? 'Company: ' + job.company + '\n' : ''}${
-        job.location ? 'Location: ' + job.location + '\n' : ''}${
-        job.postedDate ? 'Posted: ' + job.postedDate + '\n' : ''
-      }${job.description}`,
-      source: url,
+    // Convert to RetrievalDoc format with action buttons
+    return careerContent.map(content => ({
+      content: `${content.title}\n${
+        content.company ? 'Company: ' + content.company + '\n' : ''}${
+        content.location ? 'Location: ' + content.location + '\n' : ''}${
+        content.salary ? 'Salary: ' + content.salary + '\n' : ''}${
+        content.postedDate ? 'Posted: ' + content.postedDate + '\n' : ''}${
+        content.description}\n\nActions:\n${
+        content.actions.map(action => `[${action.label}](${action.url})`).join('\n')}`,
+      source: content.source,
       score: 1.0,
-      title: job.title,
-      url: job.url
+      title: content.title,
+      url: content.url
     }));
   } catch (error) {
     console.error(`Error scraping from ${url}:`, error);
@@ -170,16 +236,38 @@ async function fetchFromWebpage(url: string, query: string): Promise<RetrievalDo
 function calculateRelevanceScore(doc: RetrievalDoc, query: string): number {
   const queryTerms = query.toLowerCase().split(/\s+/);
   const content = doc.content.toLowerCase();
+  const title = (doc.title || '').toLowerCase();
   
-  // Count term matches
-  const termMatches = queryTerms.filter(term => content.includes(term)).length;
+  // Calculate term matches in title and content
+  const titleMatches = queryTerms.filter(term => title.includes(term)).length;
+  const contentMatches = queryTerms.filter(term => content.includes(term)).length;
   
   // Calculate base score
-  let score = (termMatches / queryTerms.length) * 0.7;
+  let score = (titleMatches / queryTerms.length) * 0.4 + // Title matches weighted more
+              (contentMatches / queryTerms.length) * 0.3;
   
   // Boost score for exact phrase matches
+  if (title.includes(query.toLowerCase())) {
+    score += 0.2;
+  }
   if (content.includes(query.toLowerCase())) {
-    score += 0.3;
+    score += 0.1;
+  }
+  
+  // Boost score based on content freshness (if postedDate exists)
+  if (content.includes('posted:')) {
+    const postedMatch = content.match(/posted:\s*([^\n]+)/i);
+    if (postedMatch) {
+      const postedDate = new Date(postedMatch[1]);
+      if (!isNaN(postedDate.getTime())) {
+        const daysSincePosted = (new Date().getTime() - postedDate.getTime()) / (1000 * 60 * 60 * 24);
+        if (daysSincePosted < 7) {
+          score += 0.2; // Boost very recent content
+        } else if (daysSincePosted < 30) {
+          score += 0.1; // Small boost for recent content
+        }
+      }
+    }
   }
   
   return score;
