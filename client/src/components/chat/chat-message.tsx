@@ -14,6 +14,7 @@ import {
   getColorSchemeForConfidence,
   getSupportivePhrase 
 } from "@/contexts/CareerConfidenceContext";
+import { formatMessageContent } from "@/lib/chat-utils";
 import { theme } from "@/lib/theme";
 
 interface ChatMessageProps {
@@ -87,54 +88,9 @@ const ChatMessage = ({ message, onSpeakMessage }: ChatMessageProps) => {
   // Process message content to highlight important points
   useEffect(() => {
     if (!isUser) {
-      let content = message.content;
-      
-      // Format link tags
-      content = content.replace(/<a href="(.*?)".*?>(.*?)<\/a>/g, 
-        '<a href="$1" class="text-primary-600 hover:underline" target="_blank" rel="noopener noreferrer">$2</a>'
-      );
-      
-      // Format JSON blocks
-      if (content.includes('```json')) {
-        content = content.replace(/```json([\s\S]*?)```/g, (match, p1) => {
-          try {
-            const formatted = JSON.stringify(JSON.parse(p1), null, 2);
-            return `<pre class="bg-gray-50 p-3 rounded-md overflow-x-auto"><code class="language-json">${formatted}</code></pre>`;
-          } catch {
-            return match;
-          }
-        });
-      }
-      
-      // Format JSX/TSX blocks
-      if (content.includes('```jsx') || content.includes('```tsx')) {
-        content = content.replace(/```(jsx|tsx)([\s\S]*?)```/g, 
-          '<pre class="bg-gray-50 p-3 rounded-md overflow-x-auto"><code class="language-typescript">$2</code></pre>'
-        );
-      }
-      
-      // Highlight key terms
-      content = content.replace(/<span class="bot-highlight">(.*?)<\/span>/g,
-        '<span class="font-semibold text-primary-600">$1</span>'
-      );
-      
-      // Process emoji prefixed lines
-      content = content.split('\n').map(line => {
-        if (line.match(/^[📝🔍💡✨🎯🚀]/) && !line.includes('class="')) {
-          return `<div class="flex items-start gap-2 my-1">
-            <span class="text-lg leading-6">${line.charAt(0)}</span>
-            <span class="flex-1">${line.slice(1).trim()}</span>
-          </div>`;
-        }
-        return line;
-      }).join('\n');
-
-      setFormattedContent(content);
-      
-      // Extract key points for the summary dialog
-      setKeyPoints(extractKeyPoints(message.content));
-    } else {
-      setFormattedContent(message.content);
+      const { formattedHtml, keyPoints: points } = formatMessageContent(message.content);
+      setFormattedContent(formattedHtml);
+      setKeyPoints(points);
     }
   }, [message.content, isUser]);
 

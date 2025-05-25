@@ -2,6 +2,7 @@ import { Groq } from 'groq-sdk';
 import { retrieveRelevantDocs } from './rag-service';
 import { detectLanguage } from '../utils/language';
 import type { EnhancedMessage } from '../storage';
+import { getSystemPrompt } from './prompt-templates';
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -63,45 +64,23 @@ export async function generateResponse(
       userMessage.toLowerCase().includes(keyword)
     );
     
-    // Fetch relevant documents if it's a fact-based query
+    // Fetch relevant documents if needed
     if (isFactBased && retrievalDocs.length === 0) {
       retrievalDocs = await retrieveRelevantDocs(userMessage);
     }
 
-    // Construct system message
-    let systemContent = `You are Asha AI, an enthusiastic and supportive career companion for women. 
+    // Get system prompt from template
+    const systemContent = getSystemPrompt(isFirstInteraction, detectedLanguage);
 
-RESPONSE FORMAT:
-1. ${isFirstInteraction 
-    ? 'Start with: "🌟 Hello! I\'m Asha AI 😊 How can I empower you today? 💖"'
-    : 'Start with a brief acknowledgment like "Sure!", "Got it!", or "I understand!"'}
-2. Format your response in clear, concise bullet points
-3. Use appropriate emojis naturally throughout
-4. End with "Let me know if I can support you further! 💕"
+    // Add retrieval context if available
+    const fullPrompt = retrievalDocs.length > 0 
+      ? `${systemContent}\n\nRELEVANT CONTEXT:\n${formatRetrievalDocs(retrievalDocs)}`
+      : systemContent;
 
-IMPORTANT GUIDELINES:
-- Maintain a warm, empathetic tone throughout
-- Format all URLs as <a href="URL" class="bot-link">descriptive text</a>
-- For any statistics or facts, cite the source: "According to [Source Name], ..."
-- If unsure about information, say: "I'm sorry, I don't have reliable info on that right now."
-- Keep responses concise and actionable
-- Reference previous conversation context naturally
-- Use bullet points for multi-item responses
-- Never use long paragraphs
-- Wrap key terms in <span class="bot-highlight">...</span>
-
-${retrievalDocs.length > 0 ? 'Here is relevant contextual data:\n' + formatRetrievalDocs(retrievalDocs) : ''}`;
-
-    // Add language instruction if not English
-    if (detectedLanguage !== 'english') {
-      systemContent += `\n\nIMPORTANT: Respond in ${detectedLanguage} language. All text should be in ${detectedLanguage}, not English.`;
-    }
-
-    // Format history for context (last 5 messages)
-    const recentHistory = sessionHistory.slice(-5);
+    // Format history for context
     const messages = [
-      { role: 'system' as const, content: systemContent },
-      ...recentHistory.map(msg => ({
+      { role: 'system' as const, content: fullPrompt },
+      ...sessionHistory.map(msg => ({
         role: msg.role as 'user' | 'assistant',
         content: msg.content
       })),

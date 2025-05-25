@@ -4,6 +4,7 @@ export const theme = {
       main: '#6A2C91',
       light: '#9D5CC2',
       dark: '#4A1D71',
+      hover: 'rgba(106, 44, 145, 0.05)',
       gradient: 'linear-gradient(to right, #6A2C91, #9D5CC2)'
     },
     background: {

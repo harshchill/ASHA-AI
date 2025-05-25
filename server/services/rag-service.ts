@@ -6,6 +6,12 @@ interface RetrievalDoc {
   source: string;
   url?: string;
   score: number;
+  title?: string;
+}
+
+interface Source {
+  url: string;
+  type: 'api' | 'web';
 }
 
 async function fetchFromAPI(url: string): Promise<RetrievalDoc[]> {
@@ -112,7 +118,20 @@ const prioritizeHerKeyResults = (docs: RetrievalDoc[]): RetrievalDoc[] => {
 };
 
 export async function retrieveRelevantDocs(query: string): Promise<RetrievalDoc[]> {
-  const sources = [
+  // First search HerKey Foundation
+  const herKeyFoundationSources: Source[] = [
+    {
+      url: `https://herkeyfoundation.org/api/resources?query=${encodeURIComponent(query)}`,
+      type: 'api'
+    },
+    {
+      url: `https://herkeyfoundation.org/api/articles?search=${encodeURIComponent(query)}`,
+      type: 'api'
+    }
+  ];
+
+  // Fallback sources if no Foundation results
+  const otherSources: Source[] = [
     {
       url: `https://api.jobsforher.com/v1/resources?query=${encodeURIComponent(query)}`,
       type: 'api'
@@ -128,41 +147,43 @@ export async function retrieveRelevantDocs(query: string): Promise<RetrievalDoc[
     {
       url: 'https://www.catalyst.org/research/women-in-tech/',
       type: 'web'
-    },
-    {
-      url: 'https://labour.gov.in/data',
-      type: 'web'
-    },
-    {
-      url: 'https://insights.stackoverflow.com/survey',
-      type: 'web'
     }
   ];
 
-  const fetchPromises = sources.map(source => 
+  // First try HerKey Foundation sources
+  const herKeyPromises = herKeyFoundationSources.map(source => 
+    source.type === 'api' ? fetchFromAPI(source.url) : fetchFromWebpage(source.url)
+  );
+  
+  const herKeyResults = await Promise.all(herKeyPromises);
+  const herKeyDocs = herKeyResults.flat();
+  
+  // If we have Foundation results, score them and return
+  if (herKeyDocs.length > 0) {
+    const scoredHerKeyDocs = herKeyDocs.map(doc => ({
+      ...doc,
+      score: calculateRelevanceScore(doc, query)
+    })).sort((a, b) => b.score - a.score)
+      .slice(0, 5); // Take top 5 Foundation results
+      
+    return scoredHerKeyDocs;
+  }
+  
+  // If no Foundation results, try other sources
+  const otherPromises = otherSources.map(source => 
     source.type === 'api' ? fetchFromAPI(source.url) : fetchFromWebpage(source.url)
   );
 
-  const results = await Promise.all(fetchPromises);
-  const allDocs = results.flat();
+  const otherResults = await Promise.all(otherPromises);
+  const allDocs = otherResults.flat();
   
-  // Calculate relevance scores
+  // Calculate relevance scores for other results
   const scoredDocs = allDocs.map(doc => ({
     ...doc,
     score: calculateRelevanceScore(doc, query)
-  }));
-  
-  // Sort by relevance and take top 3
-  const sortedDocs = scoredDocs
-    .sort((a, b) => b.score - a.score)
-    .filter(doc => doc.score > 0.1); // Filter out very low relevance docs
-    
-  // After fetching results, prioritize HerKey Foundation content
-  const prioritizedResults = prioritizeHerKeyResults(results);
-  
-  // Take top results but ensure at least one HerKey result if available
-  const maxResults = 5;
-  const finalResults = prioritizedResults.slice(0, maxResults);
+  })).sort((a, b) => b.score - a.score)
+    .filter(doc => doc.score > 0.1) // Filter out low relevance
+    .slice(0, 5); // Take top 5
 
-  return finalResults;
+  return scoredDocs;
 }
