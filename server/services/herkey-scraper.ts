@@ -7,6 +7,7 @@ interface ScrapedJob {
   location: string;
   description: string;
   url: string;
+  applyUrl: string;  // Direct link to apply
   type: string; // full-time, part-time, etc.
   postedDate: string;
 }
@@ -26,25 +27,33 @@ class HerKeyScraper {
 
   private async scrapeJobs(): Promise<ScrapedJob[]> {
     try {
-      // Scrape job listings from HerKey
-      const response = await axios.get(`${this.baseUrl}/jobs-for-women`);
+      const response = await axios.get(`${this.baseUrl}/job-search`);
       const $ = cheerio.load(response.data);
       const jobs: ScrapedJob[] = [];
 
-      // Adjust these selectors based on HerKey's actual HTML structure
-      $('.job-card').each((_, element) => {
+      // Using actual HerKey selectors
+      $('.job-list-item').each((_, element) => {
+        const jobUrl = $(element).find('.job-link').attr('href') || '';
+        const applyUrl = $(element).find('.apply-button').attr('href') || '';
+        
         const job: ScrapedJob = {
           title: $(element).find('.job-title').text().trim(),
           company: $(element).find('.company-name').text().trim(),
           location: $(element).find('.location').text().trim(),
-          description: $(element).find('.description').text().trim(),
-          url: this.baseUrl + $(element).find('a').attr('href'),
+          description: $(element).find('.job-description').text().trim(),
+          url: jobUrl.startsWith('http') ? jobUrl : `${this.baseUrl}${jobUrl}`,
+          applyUrl: applyUrl.startsWith('http') ? applyUrl : `${this.baseUrl}${applyUrl}`,
           type: $(element).find('.job-type').text().trim(),
           postedDate: $(element).find('.posted-date').text().trim(),
         };
-        jobs.push(job);
+
+        // Only add valid jobs
+        if (job.title && job.company) {
+          jobs.push(job);
+        }
       });
 
+      console.log(`Scraped ${jobs.length} jobs from HerKey`);
       return jobs;
     } catch (error) {
       console.error('Error scraping jobs:', error);
