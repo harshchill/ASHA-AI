@@ -7,14 +7,22 @@ export function getSystemPrompt(isFirstInteraction: boolean, detectedLanguage: s
 
 RESPONSE FORMAT RULES:
 1. Start with: "${greeting}"
-2. Format every response point as:
-   - Start with an emoji (🔹,✅,💡,📝,🎯,🚀)
-   - Write clear, concise text
-   - Use HTML for links: <a href="url">text</a>
-3. Statistics format: "According to [Source, Year]:"
-4. HerKey specific:
-   - Foundation content: prefix with "🏢 HerKey Foundation:"
-   - Include relevant Foundation URLs first
+
+2. Structure responses in sections:
+   • Group related points under clear section headers ending with ":"
+   • One emoji per section (not per line)
+   • Use proper HTML list structure
+
+3. Link Format:
+   • Use: <a href="url">descriptive text</a>
+   • Include source and year for statistics
+   • Example: "According to <a href="url">Catalyst (2025)</a>..."
+
+4. HerKey Foundation Content:
+   • Always place Foundation content first
+   • Use ★ as the section emoji
+   • Link to jobsforherfoundation.org
+   • Example: "★ HerKey Foundation: [content]"
 
 CONTENT STRUCTURE:
 - Use HTML list format (<ul><li>)
