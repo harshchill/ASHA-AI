@@ -14,6 +14,8 @@ import {
 } from "@/contexts/CareerConfidenceContext";
 import { Message } from "@/types";
 
+const MESSAGE_STORAGE_KEY = 'ashaMessages';
+
 const Home = () => {
   const [sessionId, setSessionId] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -62,6 +64,28 @@ const Home = () => {
     refetchInterval: 2000,
     staleTime: 1000,
   });
+
+  // Load messages from local storage on component mount
+  useEffect(() => {
+    const storedMessages = localStorage.getItem(MESSAGE_STORAGE_KEY);
+    if (storedMessages) {
+      try {
+        const parsedMessages = JSON.parse(storedMessages);
+        if (Array.isArray(parsedMessages) && parsedMessages.length > messages.length) {
+          queryClient.setQueryData(['/api/messages', sessionId], parsedMessages);
+        }
+      } catch (error) {
+        console.error('Error parsing stored messages:', error);
+      }
+    }
+  }, [sessionId]);
+
+  // Save messages to local storage whenever they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem(MESSAGE_STORAGE_KEY, JSON.stringify(messages));
+    }
+  }, [messages]);
 
   // Send message mutation with improved error handling and logging
   const { mutate: sendMessage } = useMutation({
@@ -113,6 +137,7 @@ const Home = () => {
   const { mutate: clearChat } = useMutation({
     mutationFn: async () => {
       if (!sessionId) return;
+      localStorage.removeItem(MESSAGE_STORAGE_KEY);
       const res = await apiRequest("DELETE", `/api/messages/${sessionId}`, undefined);
       return res.json();
     },

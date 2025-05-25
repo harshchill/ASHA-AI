@@ -4,9 +4,8 @@ import * as cheerio from 'cheerio';
 interface RetrievalDoc {
   content: string;
   source: string;
-  score: number;
-  title?: string;
   url?: string;
+  score: number;
 }
 
 async function fetchFromAPI(url: string): Promise<RetrievalDoc[]> {
@@ -98,6 +97,20 @@ function calculateRelevanceScore(doc: RetrievalDoc, query: string): number {
   return score;
 }
 
+const prioritizeHerKeyResults = (docs: RetrievalDoc[]): RetrievalDoc[] => {
+  const herKeyDocs = docs.filter(doc => 
+    doc.url?.toLowerCase().includes('herkeyfoundation.org') ||
+    doc.url?.toLowerCase().includes('jfhfoundation')
+  );
+  
+  const otherDocs = docs.filter(doc => 
+    !doc.url?.toLowerCase().includes('herkeyfoundation.org') &&
+    !doc.url?.toLowerCase().includes('jfhfoundation')
+  );
+
+  return [...herKeyDocs, ...otherDocs];
+};
+
 export async function retrieveRelevantDocs(query: string): Promise<RetrievalDoc[]> {
   const sources = [
     {
@@ -144,5 +157,12 @@ export async function retrieveRelevantDocs(query: string): Promise<RetrievalDoc[
     .sort((a, b) => b.score - a.score)
     .filter(doc => doc.score > 0.1); // Filter out very low relevance docs
     
-  return sortedDocs.slice(0, 3);
+  // After fetching results, prioritize HerKey Foundation content
+  const prioritizedResults = prioritizeHerKeyResults(results);
+  
+  // Take top results but ensure at least one HerKey result if available
+  const maxResults = 5;
+  const finalResults = prioritizedResults.slice(0, maxResults);
+
+  return finalResults;
 }

@@ -33,7 +33,7 @@ export class MemStorage implements IStorage {
   private sessions: Map<string, SessionState> = new Map();
   private userId = 1;
   private messageId = 1;
-  private readonly MAX_HISTORY = 5;
+  private readonly MAX_HISTORY = 100; // Increased from 5 to 100 messages
 
   async getUser(id: number): Promise<User | undefined> {
     return this.users.find(user => user.id === id);
@@ -78,8 +78,7 @@ export class MemStorage implements IStorage {
     const sessionState = await this.getSessionState(sessionId);
     return this.messages
       .filter(message => message.sessionId === sessionId)
-      .sort((a, b) => a.id - b.id)
-      .slice(-this.MAX_HISTORY * 2); // Keep last 5 pairs (10 messages total)
+      .sort((a, b) => a.id - b.id);
   }
 
   async addMessage(insertMessage: InsertMessage): Promise<EnhancedMessage> {

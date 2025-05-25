@@ -14,6 +14,7 @@ import {
   getColorSchemeForConfidence,
   getSupportivePhrase 
 } from "@/contexts/CareerConfidenceContext";
+import { theme } from "@/lib/theme";
 
 interface ChatMessageProps {
   message: Message;
@@ -24,11 +25,10 @@ const ChatMessage = ({ message, onSpeakMessage }: ChatMessageProps) => {
   const isUser = message.role === "user";
   const [formattedContent, setFormattedContent] = useState<string>(message.content);
   const [keyPoints, setKeyPoints] = useState<string[]>([]);
-  const [showKeyPoints, setShowKeyPoints] = useState<boolean>(false);
   const { confidenceState } = useCareerConfidence();
+  const colorScheme = getColorSchemeForConfidence(confidenceState);
   
   // Get the color scheme and supportive text based on confidence level
-  const colorScheme = getColorSchemeForConfidence(confidenceState);
   const supportivePhrase = getSupportivePhrase(confidenceState);
   
   // Extract key points from the message
@@ -87,36 +87,48 @@ const ChatMessage = ({ message, onSpeakMessage }: ChatMessageProps) => {
   // Process message content to highlight important points
   useEffect(() => {
     if (!isUser) {
-      // Highlight headings and key points
       let content = message.content;
       
-      // Highlight bold text (already in markdown format)
-      content = content.replace(/\*\*(.*?)\*\*/g, '<span class="font-bold text-[#6A2C91]">$1</span>');
+      // Format link tags
+      content = content.replace(/<a href="(.*?)".*?>(.*?)<\/a>/g, 
+        '<a href="$1" class="text-primary-600 hover:underline" target="_blank" rel="noopener noreferrer">$2</a>'
+      );
       
-      // Highlight numbered points (1., 2., etc.)
-      content = content.replace(/(\d+\.\s+)([^\n]+)/g, '$1<span class="font-semibold text-[#6A2C91]">$2</span>');
-      
-      // Highlight bullet points
-      content = content.replace(/(\*\s+)([^\n]+)/g, '$1<span class="font-semibold">$2</span>');
-      
-      // Process emoji lines to highlight them
-      const lines = content.split('\n');
-      const processedLines = lines.map(line => {
-        // Detect if line has emoji (using surrogate pair detection)
-        if (line.match(/[\uD800-\uDBFF][\uDC00-\uDFFF]/)) {
-          if (line.includes(':')) {
-            // This is likely a heading with emoji and colon
-            return line.replace(/(.*?:)/, '<span class="font-semibold text-[#6A2C91]">$1</span>');
-          } else {
-            // This is a line with emoji but no colon
-            return '<span class="font-medium">' + line + '</span>';
+      // Format JSON blocks
+      if (content.includes('```json')) {
+        content = content.replace(/```json([\s\S]*?)```/g, (match, p1) => {
+          try {
+            const formatted = JSON.stringify(JSON.parse(p1), null, 2);
+            return `<pre class="bg-gray-50 p-3 rounded-md overflow-x-auto"><code class="language-json">${formatted}</code></pre>`;
+          } catch {
+            return match;
           }
+        });
+      }
+      
+      // Format JSX/TSX blocks
+      if (content.includes('```jsx') || content.includes('```tsx')) {
+        content = content.replace(/```(jsx|tsx)([\s\S]*?)```/g, 
+          '<pre class="bg-gray-50 p-3 rounded-md overflow-x-auto"><code class="language-typescript">$2</code></pre>'
+        );
+      }
+      
+      // Highlight key terms
+      content = content.replace(/<span class="bot-highlight">(.*?)<\/span>/g,
+        '<span class="font-semibold text-primary-600">$1</span>'
+      );
+      
+      // Process emoji prefixed lines
+      content = content.split('\n').map(line => {
+        if (line.match(/^[📝🔍💡✨🎯🚀]/) && !line.includes('class="')) {
+          return `<div class="flex items-start gap-2 my-1">
+            <span class="text-lg leading-6">${line.charAt(0)}</span>
+            <span class="flex-1">${line.slice(1).trim()}</span>
+          </div>`;
         }
         return line;
-      });
-      
-      content = processedLines.join('\n');
-      
+      }).join('\n');
+
       setFormattedContent(content);
       
       // Extract key points for the summary dialog
@@ -177,7 +189,7 @@ const ChatMessage = ({ message, onSpeakMessage }: ChatMessageProps) => {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="mt-4 space-y-2">
-                    {keyPoints.map((point, index) => (
+                    {keyPoints.map((point: string, index: number) => (
                       <div key={index} className={`flex items-start gap-2 p-2 rounded-md ${colorScheme.keyPointBg}`}>
                         <div className={`w-5 h-5 ${colorScheme.keyPointNumberBg} rounded-full flex items-center justify-center text-white flex-shrink-0 mt-0.5`}>
                           {index + 1}
