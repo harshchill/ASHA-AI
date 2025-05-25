@@ -1,19 +1,23 @@
 .bot-link {
-  color: #1a73e8;
-  background: rgba(26, 115, 232, 0.1);
-  padding: 2px 4px;
+  color: #6A2C91; /* Match the brand color */
+  background: rgba(106, 44, 145, 0.05);
+  padding: 2px 6px;
   border-radius: 4px;
   text-decoration: none;
-  transition: background 0.2s;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid rgba(106, 44, 145, 0.1);
+  font-weight: 500;
 }
 
 .bot-link:hover {
-  background: rgba(26, 115, 232, 0.2);
+  background: rgba(106, 44, 145, 0.1);
+  border-bottom-color: rgba(106, 44, 145, 0.2);
 }
 
 .bot-highlight {
-  background: #fff8c4;
-  color: #665c00;
-  padding: 1px 3px;
+  background: linear-gradient(120deg, rgba(106, 44, 145, 0.08), rgba(157, 92, 194, 0.08));
+  color: #6A2C91;
+  padding: 1px 4px;
   border-radius: 3px;
-} 
+  font-weight: 500;
+}
