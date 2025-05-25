@@ -1,19 +1,91 @@
+/* Base link styles */
 .bot-link {
   color: #1a73e8;
-  background: rgba(26, 115, 232, 0.1);
-  padding: 2px 4px;
-  border-radius: 4px;
+  background: rgba(26, 115, 232, 0.05);
+  padding: 4px 8px;
+  border-radius: 6px;
   text-decoration: none;
-  transition: background 0.2s;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 2px;
+  border-left: 3px solid transparent;
+  font-weight: 500;
 }
 
 .bot-link:hover {
-  background: rgba(26, 115, 232, 0.2);
+  background: rgba(26, 115, 232, 0.1);
+  transform: translateY(-1px);
 }
 
+/* Source-specific styles */
+.bot-link[data-source="herkey"] {
+  color: #6A2C91;
+  background: rgba(106, 44, 145, 0.08);
+  border-color: #6A2C91;
+}
+
+.bot-link[data-source="linkedin"] {
+  color: #0a66c2;
+  background: rgba(10, 102, 194, 0.08);
+  border-color: #0a66c2;
+}
+
+.bot-link[data-source="indeed"] {
+  color: #2557a7;
+  background: rgba(37, 87, 167, 0.08);
+  border-color: #2557a7;
+}
+
+/* Content type indicators */
+.bot-link[data-type]::before {
+  font-size: 14px;
+}
+
+.bot-link[data-type="job"]::before {
+  content: "💼";
+}
+
+.bot-link[data-type="company"]::before {
+  content: "🏢";
+}
+
+.bot-link[data-type="community"]::before {
+  content: "👥";
+}
+
+.bot-link[data-type="event"]::before {
+  content: "📅";
+}
+
+.bot-link[data-type="learning"]::before {
+  content: "📚";
+}
+
+.bot-link[data-type="article"]::before {
+  content: "📄";
+}
+
+.bot-link[data-type="resource"]::before {
+  content: "🔗";
+}
+
+/* Priority source indicator */
+.bot-link[data-priority="high"] {
+  box-shadow: 0 2px 4px rgba(106, 44, 145, 0.1);
+}
+
+.bot-link[data-priority="high"]::after {
+  content: "✨";
+  margin-left: 4px;
+  font-size: 12px;
+}
+
+/* Highlight for other text */
 .bot-highlight {
   background: #fff8c4;
   color: #665c00;
   padding: 1px 3px;
   border-radius: 3px;
-} 
+}
