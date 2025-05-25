@@ -6,75 +6,163 @@ interface RetrievalDoc {
   source: string;
   url?: string;
   score: number;
+  title?: string;
+  priority?: number;
+  sourceName?: string;
 }
 
-async function fetchFromAPI(url: string): Promise<RetrievalDoc[]> {
-  try {
-    const response = await axios.get(url, {
-      timeout: 5000,
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Asha-AI/1.0'
-      }
-    });
-    
-    // Handle different API response formats
-    const data = response.data;
-    if (Array.isArray(data)) {
-      return data.map(item => ({
-        content: JSON.stringify(item),
-        source: url,
-        score: 1.0,
-        title: item.title || item.name,
-        url: item.url || item.link
-      }));
-    }
-    
-    return [{
-      content: JSON.stringify(data),
-      source: url,
-      score: 1.0,
-      title: data.title || data.name,
-      url: data.url || data.link
-    }];
-  } catch (error) {
-    console.error(`Error fetching from ${url}:`, error);
-    return [];
+interface JobSource {
+  url: string;
+  type: 'api' | 'web';
+  name: string;
+  priority: number;
+}
+
+const jobSources: JobSource[] = [
+  // Primary sources (HerKey ecosystem)
+  {
+    url: 'https://jobsforher.com/jobs',
+    type: 'web',
+    name: 'JobsForHer',
+    priority: 1
+  },
+  {
+    url: 'https://womenreturners.com/jobs',
+    type: 'web',
+    name: 'WomenReturners',
+    priority: 1
+  },
+  // Secondary sources (Major job portals)
+  {
+    url: 'https://www.linkedin.com/jobs/search',
+    type: 'web',
+    name: 'LinkedIn',
+    priority: 2
+  },
+  {
+    url: 'https://www.naukri.com',
+    type: 'web',
+    name: 'Naukri',
+    priority: 2
+  },
+  {
+    url: 'https://www.indeed.com/jobs',
+    type: 'web',
+    name: 'Indeed',
+    priority: 2
+  },
+  {
+    url: 'https://www.glassdoor.co.in/Job/index.htm',
+    type: 'web',
+    name: 'Glassdoor',
+    priority: 2
+  },
+  // Research and data sources
+  {
+    url: 'https://www.anitab.org/resources/research/',
+    type: 'web',
+    name: 'AnitaB.org',
+    priority: 3
+  },
+  {
+    url: 'https://www.catalyst.org/research/women-in-tech/',
+    type: 'web',
+    name: 'Catalyst',
+    priority: 3
   }
+];
+
+interface ScrapedJob {
+  title: string;
+  company?: string;
+  location?: string;
+  description: string;
+  url: string;
+  postedDate?: string;
 }
 
-async function fetchFromWebpage(url: string): Promise<RetrievalDoc[]> {
+async function fetchFromWebpage(url: string, query: string): Promise<RetrievalDoc[]> {
   try {
-    const response = await axios.get(url, {
-      timeout: 5000,
+    let fullUrl = url;
+    if (!url.includes(query)) {
+      // Add search parameters based on the job site
+      if (url.includes('linkedin.com')) {
+        fullUrl = `${url}?keywords=${encodeURIComponent(query)}`;
+      } else if (url.includes('indeed.com')) {
+        fullUrl = `${url}?q=${encodeURIComponent(query)}`;
+      } else if (url.includes('naukri.com')) {
+        fullUrl = `${url}/search/${encodeURIComponent(query)}-jobs`;
+      } else if (url.includes('glassdoor')) {
+        fullUrl = `${url}?q=${encodeURIComponent(query)}`;
+      }
+    }
+
+    const response = await axios.get(fullUrl, {
+      timeout: 10000,
       headers: {
-        'User-Agent': 'Asha-AI/1.0'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Referer': 'https://www.google.com/'
       }
     });
     
     const $ = cheerio.load(response.data);
+    const jobs: ScrapedJob[] = [];
     
-    // Extract main content based on common content containers
-    const content = $('article, .content, .main, #main, .post-content')
-      .text()
-      .replace(/\s+/g, ' ')
-      .trim();
+    // Generic job listing selectors
+    const jobCards = $('div[class*="job-"], div[class*="card"], .job-listing, article');
+    
+    jobCards.each((_, element) => {
+      const el = $(element);
+      const title = el.find('h2, h3, [class*="title"]').first().text().trim();
+      const company = el.find('[class*="company"], [class*="employer"]').first().text().trim();
+      const location = el.find('[class*="location"]').first().text().trim();
+      const description = el.find('[class*="description"], [class*="snippet"]').first().text().trim();
+      const jobUrl = el.find('a').first().attr('href');
+      const postedDate = el.find('[class*="date"], time').first().text().trim();
       
-    // Extract title
-    const title = $('title').text() || $('h1').first().text();
+      if (title && (description || company)) {
+        jobs.push({
+          title,
+          company,
+          location,
+          description: description || `${title} - ${company} - ${location}`,
+          url: jobUrl ? new URL(jobUrl, fullUrl).href : fullUrl,
+          postedDate
+        });
+      }
+    });
     
-    // Extract meta description
-    const description = $('meta[name="description"]').attr('content');
-    
-    return [{
-      content: description || content,
+    // If no jobs found, try extracting general content
+    if (jobs.length === 0) {
+      const content = $('article, .content, .main, #main, .post-content')
+        .text()
+        .replace(/\s+/g, ' ')
+        .trim();
+        
+      if (content) {
+        jobs.push({
+          title: $('title').text() || $('h1').first().text(),
+          description: content,
+          url: fullUrl
+        });
+      }
+    }
+
+    // Convert scraped jobs to RetrievalDoc format
+    return jobs.map(job => ({
+      content: `${job.title}\n${job.company ? 'Company: ' + job.company + '\n' : ''}${
+        job.location ? 'Location: ' + job.location + '\n' : ''}${
+        job.postedDate ? 'Posted: ' + job.postedDate + '\n' : ''
+      }${job.description}`,
       source: url,
       score: 1.0,
-      title,
-      url
-    }];
+      title: job.title,
+      url: job.url
+    }));
   } catch (error) {
-    console.error(`Error fetching from ${url}:`, error);
+    console.error(`Error scraping from ${url}:`, error);
     return [];
   }
 }
@@ -111,58 +199,54 @@ const prioritizeHerKeyResults = (docs: RetrievalDoc[]): RetrievalDoc[] => {
   return [...herKeyDocs, ...otherDocs];
 };
 
-export async function retrieveRelevantDocs(query: string): Promise<RetrievalDoc[]> {
-  const sources = [
-    {
-      url: `https://api.jobsforher.com/v1/resources?query=${encodeURIComponent(query)}`,
-      type: 'api'
-    },
-    {
-      url: `https://womenreturners.com/api/articles?search=${encodeURIComponent(query)}`,
-      type: 'api'
-    },
-    {
-      url: 'https://www.anitab.org/resources/research/',
-      type: 'web'
-    },
-    {
-      url: 'https://www.catalyst.org/research/women-in-tech/',
-      type: 'web'
-    },
-    {
-      url: 'https://labour.gov.in/data',
-      type: 'web'
-    },
-    {
-      url: 'https://insights.stackoverflow.com/survey',
-      type: 'web'
-    }
-  ];
+async function fetchWithRateLimit(source: JobSource, query: string): Promise<RetrievalDoc[]> {
+  try {
+    return await fetchFromWebpage(source.url, query);
+  } catch (error) {
+    console.error(`Error fetching from ${source.name}:`, error);
+    return [];
+  }
+}
 
-  const fetchPromises = sources.map(source => 
-    source.type === 'api' ? fetchFromAPI(source.url) : fetchFromWebpage(source.url)
+export async function retrieveRelevantDocs(query: string): Promise<RetrievalDoc[]> {
+  // Fetch from all sources with rate limiting
+  const fetchPromises = jobSources.map(source => 
+    new Promise<RetrievalDoc[]>(resolve => {
+      setTimeout(async () => {
+        const docs = await fetchWithRateLimit(source, query);
+        resolve(docs.map(doc => ({
+          ...doc,
+          priority: source.priority,
+          sourceName: source.name
+        })));
+      }, source.priority * 200); // Stagger requests based on priority
+    })
   );
 
   const results = await Promise.all(fetchPromises);
   const allDocs = results.flat();
-  
-  // Calculate relevance scores
+    // Calculate relevance scores
   const scoredDocs = allDocs.map(doc => ({
     ...doc,
-    score: calculateRelevanceScore(doc, query)
+    score: calculateRelevanceScore(doc, query) * (1 / (doc.priority || 3)) // Adjust score based on source priority, default to lowest priority
   }));
   
-  // Sort by relevance and take top 3
+  // Sort by score and filter low relevance
   const sortedDocs = scoredDocs
     .sort((a, b) => b.score - a.score)
-    .filter(doc => doc.score > 0.1); // Filter out very low relevance docs
+    .filter(doc => doc.score > 0.1);
     
-  // After fetching results, prioritize HerKey Foundation content
-  const prioritizedResults = prioritizeHerKeyResults(results);
+  // Take top results but ensure representation from primary sources
+  const maxResults = 10;
+  const primaryDocs = sortedDocs.filter(doc => doc.priority === 1);
+  const otherDocs = sortedDocs.filter(doc => (doc.priority || 3) > 1);
   
-  // Take top results but ensure at least one HerKey result if available
-  const maxResults = 5;
-  const finalResults = prioritizedResults.slice(0, maxResults);
-
-  return finalResults;
+  // Ensure at least 30% of results are from primary sources if available
+  const minPrimaryDocs = Math.min(Math.ceil(maxResults * 0.3), primaryDocs.length);
+  const remainingSlots = maxResults - minPrimaryDocs;
+  
+  return [
+    ...primaryDocs.slice(0, minPrimaryDocs),
+    ...otherDocs.slice(0, remainingSlots)
+  ];
 }
