@@ -76,47 +76,54 @@ const ChatMessage = ({ message, onSpeakMessage }: ChatMessageProps) => {
   useEffect(() => {
     if (!isUser) {
       let content = message.content;
+
+      // Step 1: Format headings (if any)
+      content = content.replace(/^# (.*$)/gm, '<h1 class="text-lg font-bold text-[#6A2C91] mb-2 mt-3">$1</h1>');
+      content = content.replace(/^## (.*$)/gm, '<h2 class="text-md font-semibold text-[#6A2C91] mb-2 mt-3">$1</h2>');
       
-      // Format link tags with our custom bot-link class and improved styling
+      // Step 2: Format links with improved styling
       content = content.replace(/<a href="(.*?)".*?>(.*?)<\/a>/g, 
-        '<a href="$1" class="bot-link inline-block px-2 py-0.5 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors duration-200" target="_blank" rel="noopener noreferrer">$2</a>'
+        '<a href="$1" class="bot-link inline-block px-2 py-0.5 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors duration-200 my-0.5" target="_blank" rel="noopener noreferrer">$2</a>'
       );
       
-      // Format JSON blocks with syntax highlighting
+      // Step 3: Format code blocks with syntax highlighting
+      // JSON blocks
       if (content.includes('```json')) {
         content = content.replace(/```json([\s\S]*?)```/g, (match, p1) => {
           try {
             const formatted = JSON.stringify(JSON.parse(p1), null, 2);
-            return `<pre class="bg-gray-50 p-3 rounded-md overflow-x-auto"><code class="language-json">${formatted}</code></pre>`;
+            return `<pre class="bg-gray-50 p-3 rounded-md overflow-x-auto my-2 border border-gray-200"><code class="language-json">${formatted}</code></pre>`;
           } catch {
             return match;
           }
         });
       }
       
-      // Format code blocks with syntax highlighting
+      // JSX/TSX blocks
       if (content.includes('```jsx') || content.includes('```tsx')) {
         content = content.replace(/```(jsx|tsx)([\s\S]*?)```/g, 
-          '<pre class="bg-gray-50 p-3 rounded-md overflow-x-auto"><code class="language-typescript">$2</code></pre>'
+          '<pre class="bg-gray-50 p-3 rounded-md overflow-x-auto my-2 border border-gray-200"><code class="language-typescript">$2</code></pre>'
         );
       }
       
-      // Convert markdown bold to highlighted spans
-      content = content.replace(/\*\*(.*?)\*\*/g, '<span class="bot-highlight">$1</span>');
+      // Step 4: Convert markdown bold to highlighted spans
+      content = content.replace(/\*\*(.*?)\*\*/g, 
+        '<span class="bot-highlight font-medium bg-gradient-to-r from-[#6A2C91]/[0.08] to-[#9D5CC2]/[0.08] px-1 py-0.5 rounded">$1</span>'
+      );
       
-      // Process bullet points and emoji-prefixed lines with improved styling
+      // Step 5: Process bullet points with improved spacing
       content = content.split('\n').map(line => {
         const trimmedLine = line.trim();
         // Only match lines starting with "•" bullet point
         if (trimmedLine.startsWith('•')) {
           const restOfLine = trimmedLine.slice(1).trim();
-          return `<div class="flex items-start gap-3 my-2.5 -ml-1 group first:mt-0">
-            <span class="text-xl leading-6 opacity-90 transition-transform duration-200 group-hover:scale-110 min-w-[1.5rem] text-center">•</span>
-            <span class="flex-1 leading-relaxed">${restOfLine}</span>
+          return `<div class="flex items-start gap-3 mt-2 first:mt-0 pl-1">
+            <span class="text-[#6A2C91] text-lg leading-6 transition-transform duration-200 hover:scale-110 min-w-[1.5rem] text-center">•</span>
+            <span class="flex-1 leading-relaxed -mt-0.5">${restOfLine}</span>
           </div>`;
         }
-        return line;
-      }).join('\n');
+        return `<div class="leading-relaxed">${line}</div>`;
+      }).join('');
 
       setFormattedContent(content);
       setKeyPoints(extractKeyPoints(message.content));
